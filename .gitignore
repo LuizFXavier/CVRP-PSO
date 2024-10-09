@@ -2,5 +2,6 @@ CmakeFiles
 cmake_install.cmake
 Makefile
 tsp_pso
+vrp_pso
 .vscode
 CmakeCache.txt
