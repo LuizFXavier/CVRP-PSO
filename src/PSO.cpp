@@ -5,6 +5,7 @@
 #include <time.h>
 #include <algorithm>
 #include <random>
+#include <stdexcept>
 #include "Cidade.hpp"
 #include "PSO.hpp"
 
@@ -17,11 +18,12 @@ PSO::PSO(string cities_file)
 
     { //Leitura das cidades
         double x, y;
+        int demanda;
         for(int i = 0; i < nCidades; i++){
             c_file >> x;
             c_file >> y;
-
-            this->cidades.push_back(Cidade(x,y));
+            c_file >> demanda;
+            this->cidades.push_back(Cidade(x, y, demanda));
         }
     }
 
@@ -79,19 +81,49 @@ void PSO::executar()
     gerar_particulas();
     main_loop();
 }
-int random_number (int i) { return rand()%i;}
+void PSO::apresentar(Particle &p)
+{
+    double distancia = 0;
+    int capcAtual = this->capacidadeV;
+    cout << "0 ";
+
+    for(int i = 0; i < nCidades; i++){
+        
+        if(this->cidades[p.solucao_atual[i+1]].demanda <= capcAtual){
+            
+            capcAtual -= this->cidades[p.solucao_atual[i + 1]].demanda;
+
+            distancia += distancias[p.solucao_atual[i]][p.solucao_atual[i+1]];
+
+            cout << p.solucao_atual[i+1] << " ";
+        }
+        else{
+            distancia += distancias[p.solucao_atual[i]][0];
+            cout << "0 ";
+            capcAtual = this->capacidadeV;
+
+            distancia += distancias[0][p.solucao_atual[i+1]];
+            cout << p.solucao_atual[i+1] << " ";
+            capcAtual -= this->cidades[p.solucao_atual[i+1]].demanda;
+        }
+        
+    }
+    cout << ": " << distancia << "\n";
+}
+
+int random_number(int i) { return rand() % i; }
 
 void PSO::gerar_particulas()
 {
     vector<int> rota(nCidades + 1);
-    for(int i = 1; i <= nCidades; i++){
-        rota[i-1] = i;
+    for(int i = 0; i < nCidades; i++){
+        rota[i] = i;
     }
     rota[nCidades] = rota[0];
     
     
     for(int i = 0; i < nParticulas; i++){
-        random_shuffle(rota.begin(), rota.end() - 1, random_number);
+        random_shuffle(rota.begin() + 1, rota.end() - 1, random_number);
         
         rota[nCidades] = rota[0];
         
@@ -142,16 +174,9 @@ void PSO::main_loop()
             
             double w = w_max - (w_max - w_min)/nRep * i;
 
-            cout<<"Antiga: ";
-            for(int j = 0; j < p.velocity.value.size(); j++)
-                cout << "("<< p.velocity.value[j].first << ", " << p.velocity.value[j].second << ") ";
-
             Velocity v = p.velocity * w + (p_best - p) * c1 * r1  + (*g_best - p) * c2 * r2;
             p.velocity = v;
-            cout <<endl<<"Nova: ";
-            for(int j = 0; j < p.velocity.value.size(); j++)
-                cout << "("<< p.velocity.value[j].first << ", " << p.velocity.value[j].second << ") ";
-            cout << endl << endl;
+            
             p.aplicar_velocidade(v);
         }
         
@@ -163,9 +188,28 @@ void PSO::main_loop()
 double PSO::calcula_caminho(std::vector<int> caminho) //Fitness function
 {
     double distancia = 0;
-    
+    int capcAtual = this->capacidadeV;
+
     for(int i = 0; i < nCidades; i++){
-        distancia += distancias[caminho[i] -1][caminho[i+1] -1];
+
+        if(this->cidades[caminho[i+1]].demanda > this->capacidadeV){
+            throw invalid_argument("Cliente com demanda maior que o esperado!\n");
+            
+        }
+        
+        
+        if(this->cidades[caminho[i+1]].demanda <= capcAtual){
+            capcAtual -= this->cidades[caminho[i + 1]].demanda;
+
+            distancia += distancias[caminho[i]][caminho[i+1]];
+        }
+        else{
+            distancia += distancias[caminho[i]][0];
+            capcAtual = this->capacidadeV;
+            distancia += distancias[0][caminho[i+1]];
+            capcAtual -= this->cidades[caminho[i+1]].demanda;
+        }
+        
     }
     return distancia;
 }

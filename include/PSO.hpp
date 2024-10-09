@@ -18,8 +18,8 @@ private:
     double c2 = 1;  //Coeficiente social
     double w_max = 1; //Coeficiente de inércia máximo
     double w_min = 0.2; //Coeficiente de inércia mínimo
-    int nRep = 2;  //Número de iterações a serem performadas
-    
+    int nRep = 10;  //Número de iterações a serem performadas
+    int capacidadeV = 100;
 
     Particle best_particle;
     double best_dist = INFINITO;
@@ -29,11 +29,13 @@ private:
 public:
     double calcula_caminho(vector<int> caminho); //Fitness function
     int nCidades;
-    int nParticulas = 5;
+    int nParticulas = 10;
     vector<Particle> particulas;
     PSO(string cities_file);
     void executar(string routes_file);
     void executar();
+
+    void apresentar(Particle &p);
 
     Particle get_best();
 };
