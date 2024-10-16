@@ -1,4 +1,5 @@
 #include <iostream>
+#include "Grafico.hpp"
 #include "PSO.hpp"
 using namespace std;
 
@@ -11,10 +12,8 @@ int main(int argc, char * argv[]){
     PSO pso(argv[1]);
 
     pso.executar();
-    for(int i = 0; i < pso.nParticulas; i++){
-        pso.apresentar(pso.particulas[i]);
-    }
-    cout<<"\n-------------------------------------\n";
-
+    
+    cout << pso.get_best().best_dist << endl;
+    Grafico::apresentar(pso.cidades, pso.get_solution(pso.get_best()));
     return EXIT_SUCCESS;
 }

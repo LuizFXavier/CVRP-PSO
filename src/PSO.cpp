@@ -81,6 +81,36 @@ void PSO::executar()
     gerar_particulas();
     main_loop();
 }
+vector<int> PSO::get_solution(Particle p)
+{
+    double distancia = 0;
+    vector<int> sol;
+    int capcAtual = this->capacidadeV;
+    sol.push_back(0);
+
+    for(int i = 0; i < nCidades; i++){
+        
+        if(this->cidades[p.solucao_atual[i+1]].demanda <= capcAtual){
+            
+            capcAtual -= this->cidades[p.solucao_atual[i + 1]].demanda;
+
+            distancia += distancias[p.solucao_atual[i]][p.solucao_atual[i+1]];
+
+            sol.push_back(p.solucao_atual[i+1]);
+        }
+        else{
+            distancia += distancias[p.solucao_atual[i]][0];
+            sol.push_back(0);
+            capcAtual = this->capacidadeV;
+
+            distancia += distancias[0][p.solucao_atual[i+1]];
+            sol.push_back(p.solucao_atual[i+1]);
+            capcAtual -= this->cidades[p.solucao_atual[i+1]].demanda;
+        }
+        
+    }
+    return sol;
+}
 void PSO::apresentar(Particle &p)
 {
     double distancia = 0;
@@ -110,6 +140,8 @@ void PSO::apresentar(Particle &p)
     }
     cout << ": " << distancia << "\n";
 }
+
+
 
 int random_number(int i) { return rand() % i; }
 
