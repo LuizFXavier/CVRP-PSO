@@ -7,6 +7,7 @@ add_executable(vrp_pso
     src/Particle.cpp
     src/Velocity.cpp
     src/Cidade.cpp
+    src/Scanner.cpp
     src/PSO.cpp
     src/Grafico.cpp
     src/main.cpp
