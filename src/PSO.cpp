@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include "Cidade.hpp"
 #include "PSO.hpp"
+#include "Scanner.hpp"
 
 PSO::PSO(string cities_file)
 {
@@ -47,6 +48,20 @@ PSO::PSO(string cities_file)
     }
     this->best_particle.best_dist = INFINITO;
 }
+void PSO::set_properties(string config_file)
+{
+    vector<string> configs = Scanner::read_config(config_file);
+
+    if(configs.size() < 6)
+        throw runtime_error("Número de parâmetros para o PSO não bate!");
+
+    this->nParticulas = stoi(configs[0]);
+    this->c1 = stod(configs[1]);
+    this->c2 = stod(configs[2]);
+    this->w_min = stod(configs[3]);
+    this->w_max = stod(configs[4]);
+    this->nRep = stoi(configs[5]);
+}
 
 void PSO::executar(string routes_file)
 {
@@ -81,6 +96,7 @@ void PSO::executar()
     gerar_particulas();
     main_loop();
 }
+
 vector<int> PSO::get_solution(Particle p)
 {
     double distancia = 0;
