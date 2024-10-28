@@ -9,7 +9,7 @@ using namespace std;
 class PSO
 {
 private:
-    double calcula_distancia(Cidade &a, Cidade &b);
+    double calcula_distancia(int a, int b);
     void main_loop();
     void gerar_particulas();
     
@@ -21,12 +21,14 @@ private:
     int nRep = 10;  //Número de iterações a serem performadas
     int capacidadeV = 10;
 
+    int desposito; //id da localidade do depósito na lista de cidades
+
     Particle best_particle;
     double best_dist = INFINITO;
 
-    vector<std::vector<double>> distancias;
-
 public:
+
+    string instance_name = "";
     vector<Cidade> cidades;
     double calcula_caminho(vector<int> caminho); //Fitness function
     int nCidades;
@@ -34,6 +36,7 @@ public:
     PSO(string cities_file);
     void executar(string routes_file);
     void executar();
+    
     void set_properties(string config_file);
 
     vector<int> get_solution(Particle p);
