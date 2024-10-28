@@ -1,6 +1,6 @@
-nParticulas: 10
+nParticulas: 20
 c1: 1
 c2: 1
-w_min: 0.2
+w_min: 0.1
 w_max: 1
-nRepetições: 10
+nRep: 500
