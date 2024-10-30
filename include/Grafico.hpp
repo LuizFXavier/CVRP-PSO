@@ -10,6 +10,6 @@ class Grafico
 private:
     /* data */
 public:
-    static void apresentar(vector<Cidade> &c, vector<int> solucao);
+    static void apresentar(string instance_name, vector<Cidade> &c, vector<int> solucao);
 
 };

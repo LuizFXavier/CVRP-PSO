@@ -1,5 +1,5 @@
 #include <iostream>
-// #include "Grafico.hpp"
+#include "Grafico.hpp"
 #include "PSO.hpp"
 using namespace std;
 
@@ -20,6 +20,6 @@ int main(int argc, char * argv[]){
     pso.apresentar(best);
 
     cout << pso.get_best().best_dist << endl;
-    //Grafico::apresentar(pso.cidades, pso.get_solution(pso.get_best()));
+    Grafico::apresentar(pso.instance_name, pso.cidades, pso.get_solution(best));
     return EXIT_SUCCESS;
 }
