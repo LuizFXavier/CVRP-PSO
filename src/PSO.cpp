@@ -164,7 +164,7 @@ void PSO::apresentar(Particle &p)
 {
     double distancia = 0;
     int capcAtual = this->capacidadeV;
-    cout << "1 ";
+    cout << "0 ";
 
     for(int i = 0; i < nCidades; i++){
         
@@ -174,15 +174,15 @@ void PSO::apresentar(Particle &p)
 
             distancia += calcula_distancia(p.solucao_atual[i], p.solucao_atual[i+1]);
 
-            cout << p.solucao_atual[i+1] +1 << " ";
+            cout << p.solucao_atual[i+1]<< " ";
         }
         else{
             distancia += calcula_distancia(p.solucao_atual[i], 0);
-            cout << "1 ";
+            cout << "0 ";
             capcAtual = this->capacidadeV;
 
             distancia += calcula_distancia(0, p.solucao_atual[i+1]);
-            cout << p.solucao_atual[i+1] +1 << " ";
+            cout << p.solucao_atual[i+1]<< " ";
             capcAtual -= this->cidades[p.solucao_atual[i+1]].demanda;
         }
         
