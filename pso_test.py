@@ -11,18 +11,13 @@ NUM_TESTES = 10
 
 instance = ""
 
-dados = {"Instância":[]}
-
-for i in range(1, NUM_TESTES +1):
-    dados[i] = []
-
-dados["Solução Ótima"] = []
-dados["Mínimo"] = []
-dados["Mediana"] = []
-dados["Máximo"] = []
-dados["Média"] = []
-dados["Melhor Caminho"] = []
-valores = []
+def reset_dados(dados):
+    dados["Instância"] = []
+    dados["Solução Ótima"] = []
+    dados["Mínimo"] = []
+    dados["Mediana"] = []
+    dados["Máximo"] = []
+    dados["Média"] = []
 
 wb = None
 ws = None
@@ -34,64 +29,54 @@ except:
     wb = Workbook()
     ws = wb.active
 
+valores = []
+dados = {"Instância":[]}
+reset_dados(dados)
+
+dados["Nº Repetições"] = [10, 10, 10, 50, 500, 1000, 50, 500, 1000]
+dados["Nº Partículas"] = [100, 1000, 10_000, 100, 100, 100, 1000, 1000, 1000]
+
+num_configs = len(dados["Nº Partículas"])
+
 count = 1
-arquivos_teste = os.listdir("./test")
+arquivos_teste = os.listdir("./test/A/")
 
 for caso_teste in arquivos_teste:
-    
-    best_solution = ""
-    min_value = 0xffffff
 
-    test_file = open("./test/"+caso_teste)
-    test_file.readline()
+    test_file = open("./test/A/"+caso_teste)
 
     line = test_file.readline()
+    line = line.split(": ")[1]
+    dados["Instância"].append(line)
 
+    line = test_file.readline()
     line = re.findall(r"value: \d+", line)[0].split(":")[1]
-
     dados["Solução Ótima"].append(float(line))
+
     test_file.close()
 
-    for i in range(1, NUM_TESTES +1):
-        processo = subprocess.run(["/mnt/c/Users/irine/Documents/Projetos/LSCAD/tsp_pso/vrp_pso",
-                        "./test/" + caso_teste,
-                        "./pso.config.txt",
-                        "./output.txt"]
-                        )
-        file = open("output.txt")
-        valor = float(file.readline())
-
-        solucao = file.readline()
+    for c in range(num_configs):
+        print("CONFIG", c)
+        for i in range(1, NUM_TESTES +1):
+            output = subprocess.check_output(["./vrp_pso",
+                            "./test/A/" + caso_teste,
+                            str(dados["Nº Partículas"][c]),
+                            str(dados["Nº Repetições"][c])]
+                            ).decode()
+            print(i)
+            valores.append(float(output))
         
-        if min_value > valor:
-            min_value = valor
-            best_solution = solucao
+        dados["Mínimo"].append(min(valores))
+        dados["Máximo"].append(max(valores))
+        dados["Média"].append(np.average(valores))
+        dados["Mediana"].append(np.median(valores))
+        valores = []
 
-        if(i == 1):
-            instance = file.readline()
-            dados["Instância"].append(instance)
-        
-        valores.append(valor)
-        dados[i].append(valor)
-        file.close()
-    
-    dados["Mínimo"].append(min_value)
-    dados["Máximo"].append(max(valores))
-    dados["Média"].append(np.average(valores))
-    dados["Mediana"].append(np.median(valores))
-    dados["Melhor Caminho"].append(best_solution)
-    valores = []
-
+    reset_dados(dados)
     print(str(count) + "/" + str(len(arquivos_teste)), caso_teste)
     count += 1
 
 tabela = pd.DataFrame(dados)
-
-config_file = open("./pso.config.txt")
-
-ws.append(["Configurações PSO:"])
-for i in range(6):
-    ws.append(list(config_file.readline().split(": ")))
 
 ws.append([])
 
