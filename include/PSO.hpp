@@ -16,12 +16,12 @@ private:
     int nParticulas = 10;
     double c1 = 1;  //Coeficiente cognitivo
     double c2 = 1;  //Coeficiente social
-    double w_min = 0.2; //Coeficiente de inércia mínimo
+    double w_min = 0.1; //Coeficiente de inércia mínimo
     double w_max = 1; //Coeficiente de inércia máximo
     int nRep = 10;  //Número de iterações a serem performadas
-    int capacidadeV = 10;
+    int capacidadeV;
 
-    int desposito; //id da localidade do depósito na lista de cidades
+    int deposito; //id da localidade do depósito na lista de cidades
 
     Particle best_particle;
     double best_dist = INFINITO;
@@ -38,6 +38,7 @@ public:
     void executar();
     
     void set_properties(string config_file);
+    void set_properties(string nParticulas, string nRep);
 
     vector<int> get_solution(Particle p);
     void apresentar(Particle &p);

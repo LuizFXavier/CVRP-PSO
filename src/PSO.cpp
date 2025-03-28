@@ -72,7 +72,7 @@ PSO::PSO(string cities_file)
 
         c_file >> line;
 
-        c_file >> this->desposito;
+        c_file >> this->deposito;
     }
 
     c_file.close();
@@ -94,6 +94,17 @@ void PSO::set_properties(string config_file)
     this->w_min = stod(configs["w_min"]);
     this->w_max = stod(configs["w_max"]);
     this->nRep = stoi(configs["nRep"]);
+}
+
+void PSO::set_properties(string nParticulas, string nRep)
+{
+    this->nParticulas = stoi(nParticulas);
+    this->nRep = stoi(nRep);
+
+    this->c1 = 0.1;
+    this->c2 = 1;
+    this->w_min = 1;
+    this->w_max = 1;
 }
 
 void PSO::executar(string routes_file)
@@ -189,7 +200,6 @@ void PSO::apresentar(Particle &p)
     }
     cout << ": " << distancia << "\n";
 }
-
 
 
 int random_number(int i) { return rand() % i; }
