@@ -4,20 +4,24 @@ import pandas as pd
 import numpy as np
 import re
 from openpyxl import load_workbook, Workbook
+from sys import argv
+from time import time
 
 caminho_output = "./PSO_data.xlsx"
 
 NUM_TESTES = 10
-
 instance = ""
 
-def reset_dados(dados):
-    dados["Instância"] = []
-    dados["Solução Ótima"] = []
-    dados["Mínimo"] = []
-    dados["Mediana"] = []
-    dados["Máximo"] = []
-    dados["Média"] = []
+arquivos_teste = []
+
+if argv[1].upper() == "F":
+    arquivos_teste.append(argv[2])
+
+elif argv[1].upper() == "D":
+    arquivos_teste = os.listdir(argv[2])
+
+else:
+    raise Exception("Não se sabe se é arquivo ou diretório!")
 
 wb = None
 ws = None
@@ -29,61 +33,81 @@ except:
     wb = Workbook()
     ws = wb.active
 
+dados = [["Mínimo:"],
+         ["Mediana:"],
+         ["Máximo:"],
+         ["Média:"],
+         ["Desvio padrão:"],
+         ["Tempo:"]]
+
 valores = []
-dados = {"Instância":[]}
-reset_dados(dados)
 
-dados["Nº Repetições"] = [10, 10, 10, 50, 500, 1000, 50, 500, 1000]
-dados["Nº Partículas"] = [100, 1000, 10_000, 100, 100, 100, 1000, 1000, 1000]
-
-num_configs = len(dados["Nº Partículas"])
+nParticulas = [30,30,30]
+nRepeticoes = [100,200,300]
 
 count = 1
-arquivos_teste = os.listdir("./test/A/")
 
 for caso_teste in arquivos_teste:
 
-    test_file = open("./test/A/"+caso_teste)
+    test_file = open(caso_teste)
+
+    nome_instancia = test_file.readline().split(": ")[1]
 
     line = test_file.readline()
-    line = line.split(": ")[1]
-    dados["Instância"].append(line)
+    try:
+        sol_otima = re.findall(r"COMMENT : \d+", line)[0]
 
-    line = test_file.readline()
-    line = re.findall(r"value: \d+", line)[0].split(":")[1]
-    dados["Solução Ótima"].append(float(line))
+        if sol_otima:
+            sol_otima = sol_otima.split(":")[1]
+        
+        else:
+            sol_otima = str(float(re.findall(r"value: \d+", line)[0].split(":")[1]))
+    
+    except ValueError:
+        sol_otima = '-'
 
     test_file.close()
 
-    for c in range(num_configs):
+    for c in range(len(nRepeticoes)):
+
         print("CONFIG", c)
+        
+        tempo = time()
         for i in range(1, NUM_TESTES +1):
             output = subprocess.check_output(["./vrp_pso",
-                            "./test/A/" + caso_teste,
-                            str(dados["Nº Partículas"][c]),
-                            str(dados["Nº Repetições"][c])]
+                            caso_teste,
+                            str(nParticulas[c]),
+                            str(nRepeticoes[c])]
                             ).decode()
             print(i)
             valores.append(float(output))
         
-        dados["Mínimo"].append(min(valores))
-        dados["Máximo"].append(max(valores))
-        dados["Média"].append(np.average(valores))
-        dados["Mediana"].append(np.median(valores))
+        tempo = (time() - tempo)/10
+
+        dados[0].append(min(valores))
+        dados[1].append(np.median(valores))
+        dados[2].append(max(valores))
+        dados[3].append(np.average(valores))
+        dados[4].append(np.std(valores))
+        dados[5].append(tempo)
+
         valores = []
 
-    reset_dados(dados)
+    ws.append([nome_instancia, sol_otima])
+    ws.append([])
+
+    ws.append(["Partículas:"] + nParticulas)
+    ws.append(["Repetições:"] + nRepeticoes)
+    ws.append([])
+
+    #Colocar na tabela e resetar dados para partir para a próxima entrada
+    for i in range(0, len(dados)):
+        ws.append(dados[i])
+        dados[i] = dados[i][:1]
+
+    ws.append([])
+    wb.save(caminho_output)
     print(str(count) + "/" + str(len(arquivos_teste)), caso_teste)
     count += 1
 
-tabela = pd.DataFrame(dados)
-
-ws.append([])
-
-ws.append(tabela.columns.tolist())
-
-for row in tabela.itertuples(index=False):
-    ws.append(row)
-
-wb.save(caminho_output)
 print("Resultado salvo em", caminho_output)
