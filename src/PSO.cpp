@@ -10,10 +10,9 @@
 #include "Cidade.hpp"
 #include "PSO.hpp"
 #include "Scanner.hpp"
+#include "util.hpp"
 
-PSO::PSO(string cities_file)
-{
-    srand(time(0)); //Seed para geração de números aleatórios posteriormente.
+void PSO::set_instance(string cities_file){
     ifstream c_file(cities_file);
 
     string line;
@@ -96,19 +95,19 @@ void PSO::set_properties(string config_file)
     this->nRep = stoi(configs["nRep"]);
 }
 
-void PSO::set_properties(string nParticulas, string nRep)
-{
+void PSO::set_nPart(string nParticulas){
     this->nParticulas = stoi(nParticulas);
-    this->nRep = stoi(nRep);
-
-    this->c1 = 0.1;
-    this->c2 = 1;
-    this->w_min = 1;
-    this->w_max = 1;
 }
 
-void PSO::executar(string routes_file)
-{
+void PSO::set_nRep(string nRep){
+    this->nRep = stoi(nRep);
+}
+
+void PSO::set_seguir_melhor(string frequencia){
+    this->seguir_melhor = stoi(frequencia);
+}
+
+void PSO::executar(string routes_file){
     ifstream r_file(routes_file);
     r_file >> nParticulas;
     
@@ -135,14 +134,12 @@ void PSO::executar(string routes_file)
 }
 
 
-void PSO::executar()
-{
+void PSO::executar(){
     gerar_particulas();
     main_loop();
 }
 
-vector<int> PSO::get_solution(Particle p)
-{
+vector<int> PSO::get_solution(Particle &p){
     double distancia = 0;
     vector<int> sol;
     int capcAtual = this->capacidadeV;
@@ -154,16 +151,16 @@ vector<int> PSO::get_solution(Particle p)
             
             capcAtual -= this->cidades[p.solucao_atual[i + 1]].demanda;
 
-            distancia += calcula_distancia(p.solucao_atual[i], p.solucao_atual[i+1]);
+            distancia += util::calcula_distancia(cidades[p.solucao_atual[i]], cidades[p.solucao_atual[i+1]]);
 
             sol.push_back(p.solucao_atual[i+1]);
         }
         else{
-            distancia += calcula_distancia(p.solucao_atual[i], 0);
+            distancia += util::calcula_distancia(cidades[p.solucao_atual[i]], cidades[0]);
             sol.push_back(0);
             capcAtual = this->capacidadeV;
 
-            distancia += calcula_distancia(0, p.solucao_atual[i+1]);
+            distancia += util::calcula_distancia(cidades[0], cidades[p.solucao_atual[i+1]]);
             sol.push_back(p.solucao_atual[i+1]);
             capcAtual -= this->cidades[p.solucao_atual[i+1]].demanda;
         }
@@ -171,41 +168,23 @@ vector<int> PSO::get_solution(Particle p)
     }
     return sol;
 }
-void PSO::apresentar(Particle &p)
-{
+
+void PSO::apresentar(Particle &p){
     double distancia = 0;
-    int capcAtual = this->capacidadeV;
-    cout << "0 ";
 
-    for(int i = 0; i < nCidades; i++){
+    auto sol = get_solution(p);
+
+    for(int i = 0; i < sol.size() - 1; i++){
         
-        if(this->cidades[p.solucao_atual[i+1]].demanda <= capcAtual){
-            
-            capcAtual -= this->cidades[p.solucao_atual[i + 1]].demanda;
-
-            distancia += calcula_distancia(p.solucao_atual[i], p.solucao_atual[i+1]);
-
-            cout << p.solucao_atual[i+1]<< " ";
-        }
-        else{
-            distancia += calcula_distancia(p.solucao_atual[i], 0);
-            cout << "0 ";
-            capcAtual = this->capacidadeV;
-
-            distancia += calcula_distancia(0, p.solucao_atual[i+1]);
-            cout << p.solucao_atual[i+1]<< " ";
-            capcAtual -= this->cidades[p.solucao_atual[i+1]].demanda;
-        }
-        
+        distancia += util::calcula_distancia(cidades[sol[i]], cidades[sol[i+1]]);
+        cout << sol[i] << " ";
     }
-    cout << ": " << distancia << "\n";
+    cout << sol[sol.size() - 1];
+
+    cout << "\n" << distancia << "\n";
 }
 
-
-int random_number(int i) { return rand() % i; }
-
-void PSO::gerar_particulas()
-{
+void PSO::gerar_particulas(){
     vector<int> rota(nCidades + 1);
     for(int i = 0; i < nCidades; i++){
         rota[i] = i;
@@ -214,7 +193,7 @@ void PSO::gerar_particulas()
     
     
     for(int i = 0; i < nParticulas; i++){
-        random_shuffle(rota.begin() + 1, rota.end() - 1, random_number);
+        shuffle(rota.begin() + 1, rota.end() - 1, default_random_engine(util::time_seed));
         
         rota[nCidades] = rota[0];
         
@@ -222,13 +201,12 @@ void PSO::gerar_particulas()
     }
 }
 
-Particle PSO::get_best()
-{
+Particle PSO::get_best(){
     return this->best_particle;
 }
 
-void PSO::main_loop()
-{   
+void PSO::main_loop(){
+
     double f_value; //Resultado da função fitness
     double g_best_value; // Melhor resultado fitness da iteração
     Particle *g_best; // Melhor partícula da iteração
@@ -255,6 +233,12 @@ void PSO::main_loop()
         if(g_best_value < this->best_particle.best_dist){
             this->best_particle = *g_best;
         }
+
+        if(seguir_melhor > 0 && i % seguir_melhor == 0){
+
+            solucao::guarda_solucao(i+1, g_best_value, get_solution(best_particle));
+        }
+
         
         for(Particle& p: particulas){
             
@@ -272,12 +256,11 @@ void PSO::main_loop()
         }
         
     }
-
-
+    
+    solucao::salva_solucoes(this->instance_name, this->nParticulas, this->nRep);
 }
 
-double PSO::calcula_caminho(std::vector<int> caminho) //Fitness function
-{
+double PSO::calcula_caminho(std::vector<int> caminho){ //Fitness function
     double distancia = 0;
     int capcAtual = this->capacidadeV;
 
@@ -288,25 +271,18 @@ double PSO::calcula_caminho(std::vector<int> caminho) //Fitness function
             
         }
         
-        
         if(this->cidades[caminho[i+1]].demanda <= capcAtual){
             capcAtual -= this->cidades[caminho[i + 1]].demanda;
 
-            distancia += calcula_distancia(caminho[i], caminho[i+1]);;
+            distancia += util::calcula_distancia(this->cidades[caminho[i]], this->cidades[caminho[i+1]]);
         }
         else{
-            distancia += calcula_distancia(caminho[i], 0);
+            distancia += util::calcula_distancia(this->cidades[caminho[i]], this->cidades[0]);
             capcAtual = this->capacidadeV;
-            distancia += calcula_distancia(0, caminho[i+1]);
+            distancia += util::calcula_distancia(this->cidades[0], this->cidades[caminho[i+1]]);
             capcAtual -= this->cidades[caminho[i+1]].demanda;
         }
         
     }
     return distancia;
-}
-
-double PSO::calcula_distancia(int a, int b)
-{
-    
-    return sqrt(pow(cidades[a].x - cidades[b].x, 2) + pow(cidades[a].y - cidades[b].y, 2));
 }
