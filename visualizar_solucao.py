@@ -3,11 +3,17 @@ from sys import argv
 from random import randint
 import matplotlib.pyplot as plt
 
+"""
+argv[1]: Arquivo de instancia
+argv[2]: Arquivo com as soluções
+argv[3]: Linha a ser desenhada
+"""
+
 if len(argv) < 4:
     raise Exception("Número errado de argumentos!")
 
 elif int(argv[3]) < 2:
-    raise Exception("Escolha uma linhas válida")
+    raise Exception("Escolha uma linha válida")
 
 instance_file = open(argv[1])
 
@@ -46,17 +52,17 @@ linha_alvo = linhas[alvo]
 
 rota = linha_alvo.split(';')[2].split('-')
 
-cores = []
+cores = ['blue', 'red', 'green', 'cyan', 'navy', 'darkred', 'crimson', 'lime', 'springgreen', 'pink', 'peru', 'slateblue', 'dimgray', 'hotpink', 'aquamarine', 'olive', 'fuchsia', 'darkseagrean']
 
-cor_atual = f"#{randint(0, 255):02x}{randint(0, 255):02x}{randint(0, 255):02x}"
+# cor_atual = f"#{randint(0, 255):02x}{randint(0, 255):02x}{randint(0, 255):02x}"
 
 k = 0
 
 for i in range(len(rota) - 1):
-    G.add_edge(int(rota[i]) +1, int(rota[i+1]) +1, color = cor_atual)
+    G.add_edge(int(rota[i]) +1, int(rota[i+1]) +1, color = cores[k% len(cores)])
 
     if(int(rota[i+1]) == 0):
-        cor_atual = f"#{randint(0, 255):02x}{randint(0, 255):02x}{randint(0, 255):02x}"
+        # cor_atual = f"#{randint(0, 255):02x}{randint(0, 255):02x}{randint(0, 255):02x}"
         k += 1
     
 
