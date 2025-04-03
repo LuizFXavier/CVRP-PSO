@@ -9,7 +9,7 @@ from time import time
 
 caminho_output = "./PSO_data.xlsx"
 
-NUM_TESTES = 10
+NUM_TESTES = 1
 instance = ""
 
 arquivos_teste = []
@@ -42,14 +42,14 @@ dados = [["Mínimo:"],
 
 valores = []
 
-nParticulas = [30,30,30]
-nRepeticoes = [100,200,300]
+nParticulas = [10]
+nRepeticoes = [1000]
 
 count = 1
 
 for caso_teste in arquivos_teste:
 
-    test_file = open(caso_teste)
+    test_file = open(argv[2] + '/' + caso_teste)
 
     nome_instancia = test_file.readline().split(": ")[1]
 
@@ -74,12 +74,19 @@ for caso_teste in arquivos_teste:
         
         tempo = time()
         for i in range(1, NUM_TESTES +1):
-            output = subprocess.check_output(["./vrp_pso",
-                            caso_teste,
+            output = subprocess.check_output([
+                            "./vrp_pso",
+                            "-instancia",
+                            argv[2] + '/' + caso_teste,
+                            "-npart",
                             str(nParticulas[c]),
-                            str(nRepeticoes[c])]
+                            "-nrep",
+                            str(nRepeticoes[c]),
+                            "-seguir-melhor",
+                            "2"]
                             ).decode()
             print(i)
+            print("valor:", output)
             valores.append(float(output))
         
         tempo = (time() - tempo)/10
