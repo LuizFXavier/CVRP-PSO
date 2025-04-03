@@ -13,12 +13,17 @@ NUM_TESTES = 1
 instance = ""
 
 arquivos_teste = []
+caminho = ''
 
-if argv[1].upper() == "F":
+if argv[1].upper() == "-F":
     arquivos_teste.append(argv[2])
 
-elif argv[1].upper() == "D":
+elif argv[1].upper() == "-D":
     arquivos_teste = os.listdir(argv[2])
+
+    caminho = argv[2]
+    if caminho[-1] != '/':
+        caminho += '/'
 
 else:
     raise Exception("Não se sabe se é arquivo ou diretório!")
@@ -42,14 +47,14 @@ dados = [["Mínimo:"],
 
 valores = []
 
-nParticulas = [10]
-nRepeticoes = [1000]
+nParticulas = [50, 50]
+nRepeticoes = [500, 1000]
 
 count = 1
 
 for caso_teste in arquivos_teste:
 
-    test_file = open(argv[2] + '/' + caso_teste)
+    test_file = open(caminho + caso_teste)
 
     nome_instancia = test_file.readline().split(": ")[1]
 
@@ -77,7 +82,7 @@ for caso_teste in arquivos_teste:
             output = subprocess.check_output([
                             "./vrp_pso",
                             "-instancia",
-                            argv[2] + '/' + caso_teste,
+                            caminho + caso_teste,
                             "-npart",
                             str(nParticulas[c]),
                             "-nrep",
