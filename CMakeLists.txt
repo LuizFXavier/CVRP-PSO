@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.22)
 project(vrp_pso)
 
 add_executable(vrp_pso
+    src/Solucao.cpp
     src/Particle.cpp
     src/Velocity.cpp
     src/Cidade.cpp
