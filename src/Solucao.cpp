@@ -7,7 +7,9 @@ std::vector<solucao::Solucao> solucao::melhor_solucao;
 void
 solucao::salva_solucoes(std::string instance_name, int nPart, int nRep){
 
-    std::string nome_arquivo = instance_name;
+    std::string nome_arquivo = "./resultado/";
+
+    nome_arquivo += instance_name;
     nome_arquivo += std::string("_nPart-") + to_string(nPart);
     nome_arquivo += std::string("_nRep-") + to_string(nRep);
     nome_arquivo += std::string(".csv");
