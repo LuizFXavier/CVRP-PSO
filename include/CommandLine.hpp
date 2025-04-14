@@ -2,14 +2,16 @@
 #include <string>
 #include <stdexcept>
 #include <iostream>
+#include <vector>
 #include "PSO.hpp"
+#include "Solucao.hpp"
 class CommandLine
 {
 public:
-    CommandLine(int argc, char* argv[], PSO &pso);
+    CommandLine(int argc, char* argv[], PSO &pso, std::vector<std::vector<Solucao>> &solucoes);
 };
 
-CommandLine::CommandLine(int argc, char* argv[], PSO &pso)
+CommandLine::CommandLine(int argc, char* argv[], PSO &pso, std::vector<std::vector<Solucao>> &solucoes)
 {
     if(argc < 5){
         throw std::runtime_error("Número errado de argumentos!");
@@ -30,6 +32,10 @@ CommandLine::CommandLine(int argc, char* argv[], PSO &pso)
         }
         else if(std::string(argv[i]) == "-seguir-melhor" && i+1 < argc){
             pso.set_seguir_melhor(argv[i+1]);
+        }
+        else if(std::string(argv[i]) == "-seguir-qualquer" && i+2 < argc){
+            pso.set_seguir_qualquer(argv[i+1]);
+            solucoes.resize(stoi(argv[i+2]) + 1);
         }
 
     }

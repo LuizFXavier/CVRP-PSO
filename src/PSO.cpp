@@ -12,6 +12,8 @@
 #include "Scanner.hpp"
 #include "util.hpp"
 
+unsigned time_seed = std::chrono::system_clock::now().time_since_epoch().count();
+
 void PSO::set_instance(string cities_file){
     ifstream c_file(cities_file);
 
@@ -103,10 +105,6 @@ void PSO::set_nRep(string nRep){
     this->nRep = stoi(nRep);
 }
 
-void PSO::set_seguir_melhor(string frequencia){
-    this->seguir_melhor = stoi(frequencia);
-}
-
 void PSO::executar(string routes_file){
     ifstream r_file(routes_file);
     r_file >> nParticulas;
@@ -129,14 +127,14 @@ void PSO::executar(string routes_file){
         cout << endl << endl;
     }
 
-    main_loop();
+    // main_loop();
 
 }
 
 
-void PSO::executar(){
+void PSO::executar(std::vector<std::vector<Solucao>> &solucoes){
     gerar_particulas();
-    main_loop();
+    main_loop(solucoes);
 }
 
 vector<int> PSO::get_solution(Particle &p){
@@ -193,7 +191,7 @@ void PSO::gerar_particulas(){
     
     
     for(int i = 0; i < nParticulas; i++){
-        shuffle(rota.begin() + 1, rota.end() - 1, default_random_engine(util::time_seed));
+        shuffle(rota.begin() + 1, rota.end() - 1, default_random_engine(time_seed));
         
         rota[nCidades] = rota[0];
         
@@ -205,7 +203,7 @@ Particle PSO::get_best(){
     return this->best_particle;
 }
 
-void PSO::main_loop(){
+void PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
 
     double f_value; //Resultado da função fitness
     double g_best_value; // Melhor resultado fitness da iteração
@@ -213,7 +211,7 @@ void PSO::main_loop(){
 
     for(int i = 0; i < nRep; i++){
         g_best_value = INFINITO;
-        int t = 0;
+        int nSalvas = 1;
         for(Particle& p: particulas){
             
             f_value = calcula_caminho(p.solucao_atual);
@@ -228,6 +226,10 @@ void PSO::main_loop(){
                 g_best_value = f_value;
                 g_best = &p;
             }
+
+            if(seguir_qualquer > 0 && i % seguir_qualquer == 0 && nSalvas < solucoes.size()){
+                util::guarda_solucao(solucoes[nSalvas++], i, f_value, get_solution(p));
+            }
         }
         // Atualiza o melhor resultado de todas as iterações
         if(g_best_value < this->best_particle.best_dist){
@@ -235,8 +237,7 @@ void PSO::main_loop(){
         }
 
         if(seguir_melhor > 0 && i % seguir_melhor == 0){
-
-            solucao::guarda_solucao(i+1, g_best_value, get_solution(best_particle));
+            util::guarda_solucao(solucoes[0], i, g_best_value, get_solution(best_particle));
         }
 
         
@@ -257,7 +258,6 @@ void PSO::main_loop(){
         
     }
     
-    solucao::salva_solucoes(this->instance_name, this->nParticulas, this->nRep);
 }
 
 double PSO::calcula_caminho(std::vector<int> caminho){ //Fitness function

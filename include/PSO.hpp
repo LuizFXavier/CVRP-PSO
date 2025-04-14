@@ -10,10 +10,8 @@ using namespace std;
 class PSO
 {
 private:
-    void main_loop();
+    void main_loop(std::vector<std::vector<Solucao>> &solucoes);
     void gerar_particulas();
-
-    int seguir_melhor = 0;
 
     int deposito; //id da localidade do depósito na lista de cidades
 
@@ -35,10 +33,13 @@ public:
     vector<Cidade> cidades;
     int nCidades;
     vector<Particle> particulas;
+
+    int seguir_melhor = 0;
+    int seguir_qualquer = 0;
     
     double calcula_caminho(vector<int> caminho); //Fitness function
     void executar(string routes_file);
-    void executar();
+    void executar(std::vector<std::vector<Solucao>> &solucoes);
 
     void set_instance(string config_file);
     
@@ -48,9 +49,15 @@ public:
 
     void set_nRep(string nRep);
 
-    void set_seguir_melhor(string frequencia);
+    inline void set_seguir_melhor(string frequencia){this->seguir_melhor = stoi(frequencia);}
+    
+    inline void set_seguir_qualquer(string frequencia){this->seguir_qualquer = stoi(frequencia);}
 
     vector<int> get_solution(Particle &p);
+
+    inline int getNPart(){return this->nParticulas;}
+    inline int getNRep(){return this->nRep;}
+
     void apresentar(Particle &p);
 
     Particle get_best();
