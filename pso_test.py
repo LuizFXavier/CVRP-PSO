@@ -9,7 +9,7 @@ from time import time
 
 caminho_output = "./PSO_data.xlsx"
 
-NUM_TESTES = 10
+NUM_TESTES = 1
 instance = ""
 
 arquivos_teste = []
@@ -47,8 +47,8 @@ dados = [["Mínimo:"],
 
 valores = []
 
-nParticulas = [50, 50, 50]
-nRepeticoes = [500, 1000, 2000]
+nParticulas = [10]
+nRepeticoes = [50]
 
 count = 1
 
@@ -88,7 +88,10 @@ for caso_teste in arquivos_teste:
                             "-nrep",
                             str(nRepeticoes[c]),
                             "-seguir-melhor",
-                            "50"]
+                            "10",
+                            "-seguir-qualquer",
+                            "1",
+                            "1"]
                             ).decode()
             print(i)
             valores.append(float(output))
