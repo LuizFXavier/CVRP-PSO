@@ -5,5 +5,5 @@ class Cidade
 public:
     double x, y;
     int demanda;
-    Cidade(double x, double y);
+    Cidade(double x, double y):x(x), y(y) {};
 };

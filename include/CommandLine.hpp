@@ -18,6 +18,7 @@ CommandLine::CommandLine(int argc, char* argv[], PSO &pso, std::vector<std::vect
     }
 
     for(int i = 1; i < argc; i++){
+        
         if(std::string(argv[i]) == "-instancia" && i+1 < argc){
             pso.set_instance(argv[i+1]);
         }
@@ -36,6 +37,9 @@ CommandLine::CommandLine(int argc, char* argv[], PSO &pso, std::vector<std::vect
         else if(std::string(argv[i]) == "-seguir-qualquer" && i+2 < argc){
             pso.set_seguir_qualquer(argv[i+1]);
             solucoes.resize(stoi(argv[i+2]) + 1);
+        }
+        else if(std::string(argv[i]) == "-elite" && i+1 < argc){
+            pso.set_elite(argv[i+1]);
         }
 
     }

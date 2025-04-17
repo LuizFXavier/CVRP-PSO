@@ -3,11 +3,6 @@
 #include <unordered_map>
 #include "Particle.hpp"
 
-Particle::Particle(vector<int> solution)
-{
-    this->solucao_atual = solution;
-}
-
 Velocity Particle::operator-(Particle &p1)
 {
     Velocity v;

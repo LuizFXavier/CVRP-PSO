@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <cmath>
 #include "Cidade.hpp"
 #include "Particle.hpp"
 #include "Solucao.hpp"
@@ -21,37 +22,49 @@ private:
     double w_min = 0.1; //Coeficiente de inércia mínimo
     double w_max = 1; //Coeficiente de inércia máximo
     int nRep = 10;  //Número de iterações a serem performadas
-    int capacidadeV;
+    int capacidadeV; //Capacidade dos veículos
 
     Particle best_particle;
     double best_dist = INFINITO;
-
-    void set_cities();
 public:
 
+    int nCidades;
     string instance_name = "";
     vector<Cidade> cidades;
-    int nCidades;
     vector<Particle> particulas;
 
-    int seguir_melhor = 0;
-    int seguir_qualquer = 0;
+    int seguir_melhor = 0; //Frequência em que o resultado da melhor partícula é guardado
+    int seguir_qualquer = 0; //Frequência em que os resultado de partículas quaisquer são guardados
+
+    int tam_elite = 0;
     
     double calcula_caminho(vector<int> caminho); //Fitness function
+    double calcula_caminho(vector<int> caminho, int begin, int end);
     void executar(string routes_file);
-    void executar(std::vector<std::vector<Solucao>> &solucoes);
 
+    void executar(std::vector<std::vector<Solucao>> &solucoes){
+        gerar_particulas();
+        main_loop(solucoes);};
+
+    double calcula_distancia(Cidade &a, Cidade &b){ return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2));}
+    double calcula_distancia(int a, int b){return calcula_distancia(cidades[a], cidades[b]);}
     void set_instance(string config_file);
     
     void set_properties(string config_file);
 
-    void set_nPart(string nParticulas);
+    void set_nPart(string nParticulas){this->nParticulas = stoi(nParticulas);};
 
-    void set_nRep(string nRep);
+    void set_nRep(string nRep){this->nRep = stoi(nRep);};
 
-    inline void set_seguir_melhor(string frequencia){this->seguir_melhor = stoi(frequencia);}
+    void set_seguir_melhor(string frequencia){this->seguir_melhor = stoi(frequencia);}
     
-    inline void set_seguir_qualquer(string frequencia){this->seguir_qualquer = stoi(frequencia);}
+    void set_seguir_qualquer(string frequencia){this->seguir_qualquer = stoi(frequencia);}
+
+    void set_elite(string n){this->tam_elite = stoi(n);}
+
+    void melhoria_2_opt(Particle &p);
+
+    void melhorar_rota(vector<int> &rota, Particle &p, int begin, int end, int des);
 
     vector<int> get_solution(Particle &p);
 
@@ -60,5 +73,5 @@ public:
 
     void apresentar(Particle &p);
 
-    Particle get_best();
+    Particle& get_best(){return this->best_particle;};
 };

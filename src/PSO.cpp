@@ -18,34 +18,36 @@ void PSO::set_instance(string cities_file){
     ifstream c_file(cities_file);
 
     string line;
-    regex reg(": ([\\w-]+)");
-    smatch match;
-
-    //Leitura do nome da instância
-    getline(c_file, line);
-    regex_search(line, match, reg);
-    instance_name = match.str(1);
-
-    //Leitura de partes desnecessárias
-    getline(c_file, line); 
-    getline(c_file, line);
-
-    //Leitura da dimensão do problema (nCidadedes)
-    getline(c_file, line); 
-    regex_search(line, match, reg);
-    nCidades = stoi(match.str(1));
-
-    getline(c_file, line); //Parte desnecessária
-
-    //Leitura da capacidade dos veículos
-    getline(c_file, line);
-    regex_search(line, match, reg);
-    capacidadeV = stoi(match.str(1));
     
-    //Início da sessão de coordenadas
-    getline(c_file, line); 
+    smatch match;
+    string chave;
 
-    { //Leitura das cidades
+    regex word_regex("[\\w-]+");
+    regex number_regex("[0-9]*\\.?[0-9]+");
+    int a = 0;
+    do{
+        getline(c_file, line);
+        cout << line << endl;
+        
+        regex_search(line, match, word_regex);
+        
+        chave = match.str();
+
+        if(chave == "NAME"){
+            regex_search(line, match, word_regex);
+            instance_name = match.str();
+        }
+        else if (chave == "DIMENSION"){
+            regex_search(line, match, number_regex);
+            nCidades = stoi(match.str());
+        }
+        else if (chave == "CAPACITY"){
+            regex_search(line, match, number_regex);
+            capacidadeV = stoi(match.str());
+        }
+    } while (chave != "NODE_COORD_SECTION");
+    cout << "Vai começar a ler as coordenadas\n";
+    { //Leitura das coordenadas dos clientes
         double x, y;
         int demanda;
         int i;
@@ -59,8 +61,8 @@ void PSO::set_instance(string cities_file){
         c_file >> x;
         c_file >> y;
         this->cidades.push_back(Cidade(x, y));
-
-        //Início da sessão de demandas
+        cout << "Terminou as coordenadas\n";
+        //Início da seção de demandas
         c_file >> line;
         
         for(c_file >> i ; i < nCidades ; c_file >> i){
@@ -75,7 +77,7 @@ void PSO::set_instance(string cities_file){
 
         c_file >> this->deposito;
     }
-
+    cout << "Terminou as demands\n";
     c_file.close();
     this->best_particle.best_dist = INFINITO;
 }
@@ -95,14 +97,6 @@ void PSO::set_properties(string config_file)
     this->w_min = stod(configs["w_min"]);
     this->w_max = stod(configs["w_max"]);
     this->nRep = stoi(configs["nRep"]);
-}
-
-void PSO::set_nPart(string nParticulas){
-    this->nParticulas = stoi(nParticulas);
-}
-
-void PSO::set_nRep(string nRep){
-    this->nRep = stoi(nRep);
 }
 
 void PSO::executar(string routes_file){
@@ -131,13 +125,84 @@ void PSO::executar(string routes_file){
 
 }
 
+void PSO::melhoria_2_opt(Particle &p){
+    int begin = 0;
+    int desalinhamento = 0;
+    cout << "rotas iniciais: " << calcula_caminho(p.solucao_atual) << endl;
+    auto solucao = get_solution(p);
 
-void PSO::executar(std::vector<std::vector<Solucao>> &solucoes){
-    gerar_particulas();
-    main_loop(solucoes);
+    for(int i = 0; i < solucao.size(); i++){
+        cout << solucao[i] << "-";
+    }
+    cout << endl << "Partícula de fato:\n";
+    for(int i = 0; i < p.solucao_atual.size(); i++){
+        cout << p.solucao_atual[i] << "-";
+    }
+
+    for(int i = 1; i < solucao.size(); i++){
+        if(solucao[i] == 0){
+            melhorar_rota(solucao, p, begin, i, desalinhamento);
+            begin = i;
+            desalinhamento++;
+        }
+    }
+    cout << "rotas otimizadas: " << calcula_caminho(p.solucao_atual) << endl;
+    for(int i = 0; i < solucao.size(); i++){
+        cout << solucao[i] << "-";
+    }
+    cout << endl << "Partícula de fato:\n";
+    for(int i = 0; i < p.solucao_atual.size(); i++){
+        cout << p.solucao_atual[i] << "-";
+    }
+    cout << endl << endl;
 }
 
-vector<int> PSO::get_solution(Particle &p){
+void PSO::melhorar_rota(vector<int> &rota, Particle &p, int begin, int end, int des){
+    bool improved = true;
+    // cout << "sub-rota inicial: " << calcula_caminho(rota, begin, end) << endl;
+    // for(int i = begin; i < end; i++){
+    //     cout << rota[i] << "-";
+    // }
+    cout << endl;
+    while (improved) {
+        improved = false;
+        for (size_t i = begin + 1; i < end; ++i) {
+            for (size_t j = i + 1; j < end; ++j) {
+                // Calcula a distância antes da troca
+                double old_dist = calcula_distancia(rota[i-1], rota[i]) + calcula_distancia(rota[j], rota[(j+1)]);
+                // Distância após a troca (2-opt swap)
+                double new_dist = calcula_distancia(rota[i-1], rota[j]) + calcula_distancia(rota[i], rota[(j+1)]);
+                // cout << "dist: " << old_dist << "/" << new_dist << endl;
+                // Se a nova distância for menor, aplica a troca
+                if (new_dist < old_dist) {
+                    cout << "Trocou! " << i << " e " << j << endl;
+                    // for(int i = begin; i < end; i++){
+                    //     cout << rota[i] << "-";
+                    // }
+                    // cout << endl;
+                    std::reverse(rota.begin() + i, rota.begin() + j + 1);
+                    // for(int i = begin; i < end; i++){
+                    //     cout << rota[i] << "-";
+                    // }
+                    // cout << endl;
+                    improved = true;
+                }
+            }
+        }
+    }
+    for(int i = begin + 1; i < end; i++){
+        p.solucao_atual[i - des] = rota[i];
+    }
+    // cout << "sub-rota otimizada: " << calcula_caminho(rota, begin, end) << endl;
+    // cout << "sub-rota inicial: " << calcula_caminho(rota, begin, end) << endl;
+    // for(int i = begin; i < end; i++){
+    //     cout << rota[i] << "-";
+    // }
+    // cout << endl << endl;
+}
+
+vector<int> PSO::get_solution(Particle &p)
+{
     double distancia = 0;
     vector<int> sol;
     int capcAtual = this->capacidadeV;
@@ -149,16 +214,16 @@ vector<int> PSO::get_solution(Particle &p){
             
             capcAtual -= this->cidades[p.solucao_atual[i + 1]].demanda;
 
-            distancia += util::calcula_distancia(cidades[p.solucao_atual[i]], cidades[p.solucao_atual[i+1]]);
+            distancia += calcula_distancia(cidades[p.solucao_atual[i]], cidades[p.solucao_atual[i+1]]);
 
             sol.push_back(p.solucao_atual[i+1]);
         }
         else{
-            distancia += util::calcula_distancia(cidades[p.solucao_atual[i]], cidades[0]);
+            distancia += calcula_distancia(cidades[p.solucao_atual[i]], cidades[0]);
             sol.push_back(0);
             capcAtual = this->capacidadeV;
 
-            distancia += util::calcula_distancia(cidades[0], cidades[p.solucao_atual[i+1]]);
+            distancia += calcula_distancia(cidades[0], cidades[p.solucao_atual[i+1]]);
             sol.push_back(p.solucao_atual[i+1]);
             capcAtual -= this->cidades[p.solucao_atual[i+1]].demanda;
         }
@@ -174,7 +239,7 @@ void PSO::apresentar(Particle &p){
 
     for(int i = 0; i < sol.size() - 1; i++){
         
-        distancia += util::calcula_distancia(cidades[sol[i]], cidades[sol[i+1]]);
+        distancia += calcula_distancia(cidades[sol[i]], cidades[sol[i+1]]);
         cout << sol[i] << " ";
     }
     cout << sol[sol.size() - 1];
@@ -199,47 +264,58 @@ void PSO::gerar_particulas(){
     }
 }
 
-Particle PSO::get_best(){
-    return this->best_particle;
-}
-
 void PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
 
     double f_value; //Resultado da função fitness
-    double g_best_value; // Melhor resultado fitness da iteração
     Particle *g_best; // Melhor partícula da iteração
 
     for(int i = 0; i < nRep; i++){
-        g_best_value = INFINITO;
         int nSalvas = 1;
+        vector<Particle*> elite;
+
         for(Particle& p: particulas){
             
             f_value = calcula_caminho(p.solucao_atual);
-            
+            p.dist_atual = f_value;
             // Atualiza o p_best da partícula i
             if(f_value < p.best_dist){
                 p.best_dist = f_value;    
                 p.p_best = p.solucao_atual;
             }
-            // Atualiza o novo possível melhor global
-            if(f_value < g_best_value){
-                g_best_value = f_value;
-                g_best = &p;
-            }
 
             if(seguir_qualquer > 0 && i % seguir_qualquer == 0 && nSalvas < solucoes.size()){
                 util::guarda_solucao(solucoes[nSalvas++], i, f_value, get_solution(p));
             }
+
+            if(elite.size() == 0 || (tam_elite != 0 && elite.size() < tam_elite)){
+                elite.push_back(&p);
+                make_heap(elite.begin(), elite.end());
+            }
+            else{
+                if(p.dist_atual < elite[0]->dist_atual){
+                    elite[0] = &p;
+                    make_heap(elite.begin(), elite.end());
+                }
+            }
         }
         // Atualiza o melhor resultado de todas as iterações
-        if(g_best_value < this->best_particle.best_dist){
-            this->best_particle = *g_best;
+        if(elite[0]->dist_atual < this->best_particle.best_dist){
+            this->best_particle = *elite[0];
         }
 
         if(seguir_melhor > 0 && i % seguir_melhor == 0){
-            util::guarda_solucao(solucoes[0], i, g_best_value, get_solution(best_particle));
+            util::guarda_solucao(solucoes[0], i, best_particle.dist_atual, get_solution(best_particle));
         }
 
+        for(int e = 0; e < elite.size(); e++){
+            cout << "Custo anterior à melhoria:" << elite[e]->dist_atual << endl;
+            melhoria_2_opt(*elite[e]);
+            
+            cout << "Custo depois da melhoria:" << calcula_caminho(elite[e]->solucao_atual) << endl;
+            make_heap(elite.begin(), elite.end());
+        }
+        
+        g_best = elite[0];
         
         for(Particle& p: particulas){
             
@@ -254,6 +330,7 @@ void PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
             p.velocity = v;
             
             p.aplicar_velocidade(v);
+
         }
         
     }
@@ -274,15 +351,23 @@ double PSO::calcula_caminho(std::vector<int> caminho){ //Fitness function
         if(this->cidades[caminho[i+1]].demanda <= capcAtual){
             capcAtual -= this->cidades[caminho[i + 1]].demanda;
 
-            distancia += util::calcula_distancia(this->cidades[caminho[i]], this->cidades[caminho[i+1]]);
+            distancia += calcula_distancia(this->cidades[caminho[i]], this->cidades[caminho[i+1]]);
         }
         else{
-            distancia += util::calcula_distancia(this->cidades[caminho[i]], this->cidades[0]);
+            distancia += calcula_distancia(this->cidades[caminho[i]], this->cidades[0]);
             capcAtual = this->capacidadeV;
-            distancia += util::calcula_distancia(this->cidades[0], this->cidades[caminho[i+1]]);
+            distancia += calcula_distancia(this->cidades[0], this->cidades[caminho[i+1]]);
             capcAtual -= this->cidades[caminho[i+1]].demanda;
         }
         
+    }
+    return distancia;
+}
+
+double PSO::calcula_caminho(vector<int> caminho, int begin, int end){
+    double distancia = 0;
+    for(int i = begin; i < end; i++){
+        distancia += calcula_distancia(cidades[i], cidades[i+1]);
     }
     return distancia;
 }
