@@ -44,13 +44,15 @@ instance_file.close()
 result_file = open(argv[2])
 linhas = result_file.readlines()
 
-print(len(linhas))
-
-alvo = int(argv[3])
+alvo = int(argv[3]) - 1
 
 linha_alvo = linhas[alvo]
 
-rota = linha_alvo.split(';')[2].split('-')
+iteracao, custo, rota = linha_alvo.split(';')
+
+print("custo:" ,custo)
+
+rota = rota.split('-')
 
 cores = ['blue', 'red', 'green', 'cyan', 'navy', 'darkred', 'crimson', 'lime', 'springgreen', 'pink', 'peru', 'slateblue', 'dimgray', 'hotpink', 'aquamarine', 'olive', 'fuchsia', 'darkseagrean']
 
@@ -73,5 +75,5 @@ nx.draw(G, coordenadas, node_color='rebeccapurple', edge_color=edge_colors, node
 plt.title(nome_instancia)
 
 
-print(k)
+print("k:", k)
 plt.show()
