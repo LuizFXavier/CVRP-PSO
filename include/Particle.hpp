@@ -18,6 +18,7 @@ public:
     Particle(){};
     Particle(vector<int> solution):solucao_atual(solution){};
     bool operator<(const Particle &p1) const {return this->dist_atual < p1.dist_atual;}
+    bool operator>(const Particle &p1) const {return this->dist_atual > p1.dist_atual;}
     Velocity operator-(Particle &p1);
     void aplicar_velocidade(Velocity &v);
 

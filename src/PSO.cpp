@@ -34,6 +34,7 @@ void PSO::set_instance(string cities_file){
         chave = match.str();
 
         if(chave == "NAME"){
+            line = match.suffix();
             regex_search(line, match, word_regex);
             instance_name = match.str();
         }
@@ -131,14 +132,6 @@ void PSO::melhoria_2_opt(Particle &p){
     cout << "rotas iniciais: " << calcula_caminho(p.solucao_atual) << endl;
     auto solucao = get_solution(p);
 
-    for(int i = 0; i < solucao.size(); i++){
-        cout << solucao[i] << "-";
-    }
-    cout << endl << "Partícula de fato:\n";
-    for(int i = 0; i < p.solucao_atual.size(); i++){
-        cout << p.solucao_atual[i] << "-";
-    }
-
     for(int i = 1; i < solucao.size(); i++){
         if(solucao[i] == 0){
             melhorar_rota(solucao, p, begin, i, desalinhamento);
@@ -146,15 +139,13 @@ void PSO::melhoria_2_opt(Particle &p){
             desalinhamento++;
         }
     }
-    cout << "rotas otimizadas: " << calcula_caminho(p.solucao_atual) << endl;
-    for(int i = 0; i < solucao.size(); i++){
-        cout << solucao[i] << "-";
+    p.dist_atual = calcula_caminho(p.solucao_atual);
+
+    if(p.best_dist > p.dist_atual){
+        p.best_dist = p.dist_atual;
+        p.p_best = p.solucao_atual;
     }
-    cout << endl << "Partícula de fato:\n";
-    for(int i = 0; i < p.solucao_atual.size(); i++){
-        cout << p.solucao_atual[i] << "-";
-    }
-    cout << endl << endl;
+    
 }
 
 void PSO::melhorar_rota(vector<int> &rota, Particle &p, int begin, int end, int des){
@@ -268,6 +259,7 @@ void PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
 
     double f_value; //Resultado da função fitness
     Particle *g_best; // Melhor partícula da iteração
+    auto particle_cmp = [](const Particle* a, const Particle* b) { return a->dist_atual > b->dist_atual; };
 
     for(int i = 0; i < nRep; i++){
         int nSalvas = 1;
@@ -298,21 +290,26 @@ void PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
                 }
             }
         }
-        // Atualiza o melhor resultado de todas as iterações
-        if(elite[0]->dist_atual < this->best_particle.best_dist){
-            this->best_particle = *elite[0];
-        }
+        
 
         if(seguir_melhor > 0 && i % seguir_melhor == 0){
-            util::guarda_solucao(solucoes[0], i, best_particle.dist_atual, get_solution(best_particle));
+            util::guarda_solucao(solucoes[0], i, elite[0]->dist_atual, get_solution(*elite[0]));
         }
+        // Aplica a heurística de melhoria
 
         for(int e = 0; e < elite.size(); e++){
-            cout << "Custo anterior à melhoria:" << elite[e]->dist_atual << endl;
             melhoria_2_opt(*elite[e]);
-            
-            cout << "Custo depois da melhoria:" << calcula_caminho(elite[e]->solucao_atual) << endl;
-            make_heap(elite.begin(), elite.end());
+        }
+        make_heap(elite.begin(), elite.end(), particle_cmp);
+
+        if(seguir_melhor > 0 && i % seguir_melhor == 0){
+            util::guarda_solucao(solucoes[0], i, elite[0]->dist_atual, get_solution(*elite[0]));
+        }
+
+        // Atualiza o melhor resultado de todas as iterações
+
+        if(elite[0]->dist_atual < this->best_particle.best_dist){
+            this->best_particle = *elite[0];
         }
         
         g_best = elite[0];

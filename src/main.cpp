@@ -10,7 +10,7 @@ int main(int argc, char * argv[]){
     PSO pso;
     
     std::vector<std::vector<Solucao>> solucoes_particulas;
-
+    solucoes_particulas.resize(1);
     CommandLine commandline(argc, argv, pso, solucoes_particulas);
 
     // cout << pso.instance_name << endl << pso.nCidades << endl;
