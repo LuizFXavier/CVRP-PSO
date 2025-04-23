@@ -47,8 +47,8 @@ dados = [["Mínimo:"],
 
 valores = []
 
-nParticulas = [10]
-nRepeticoes = [50]
+nParticulas = [25, 50]
+nRepeticoes = [1000, 1000]
 
 count = 1
 
@@ -64,13 +64,12 @@ for caso_teste in arquivos_teste:
 
         if sol_otima:
             sol_otima = sol_otima.split(":")[1]
-        
-        else:
-            sol_otima = str(float(re.findall(r"value: \d+", line)[0].split(":")[1]))
-    
+            
+    except IndexError:
+        sol_otima = str(float(re.findall(r"value: \d+", line)[0].split(":")[1]))
     except ValueError:
         sol_otima = '-'
-
+    
     test_file.close()
 
     for c in range(len(nRepeticoes)):
@@ -89,9 +88,8 @@ for caso_teste in arquivos_teste:
                             str(nRepeticoes[c]),
                             "-seguir-melhor",
                             "10",
-                            "-seguir-qualquer",
-                            "1",
-                            "1"]
+                            "-elite",
+                            "5"]
                             ).decode()
             print(i)
             valores.append(float(output))
