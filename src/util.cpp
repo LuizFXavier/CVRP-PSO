@@ -8,7 +8,8 @@ util::salva_solucoes(std::vector<Solucao> &solutions, std::string instance_name,
 
     std::string part = qual < 0 ? "_best" : std::string("_") + std::to_string(qual);
 
-    std::string nome_arquivo = instance_name;
+    std::string nome_arquivo = "./resultado/";
+    nome_arquivo += instance_name;
     nome_arquivo += part;
     nome_arquivo += std::string("_nPart-") + to_string(nPart);
     nome_arquivo += std::string("_nRep-") + to_string(nRep);

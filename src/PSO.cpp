@@ -27,7 +27,7 @@ void PSO::set_instance(string cities_file){
     int a = 0;
     do{
         getline(c_file, line);
-        cout << line << endl;
+        // cout << line << endl;
         
         regex_search(line, match, word_regex);
         
@@ -47,7 +47,7 @@ void PSO::set_instance(string cities_file){
             capacidadeV = stoi(match.str());
         }
     } while (chave != "NODE_COORD_SECTION");
-    cout << "Vai começar a ler as coordenadas\n";
+    
     { //Leitura das coordenadas dos clientes
         double x, y;
         int demanda;
@@ -62,7 +62,7 @@ void PSO::set_instance(string cities_file){
         c_file >> x;
         c_file >> y;
         this->cidades.push_back(Cidade(x, y));
-        cout << "Terminou as coordenadas\n";
+        
         //Início da seção de demandas
         c_file >> line;
         
@@ -78,7 +78,7 @@ void PSO::set_instance(string cities_file){
 
         c_file >> this->deposito;
     }
-    cout << "Terminou as demands\n";
+    
     c_file.close();
     this->best_particle.best_dist = INFINITO;
 }
@@ -88,7 +88,7 @@ void PSO::set_properties(string config_file)
     unordered_map<string, string> configs = Scanner::read_config(config_file);
 
     if(configs.size() < 6){
-        cout << configs.size() << endl;
+        // cout << configs.size() << endl;
         throw runtime_error("Número de parâmetros para o PSO não bate!");
     }
 
@@ -129,7 +129,7 @@ void PSO::executar(string routes_file){
 void PSO::melhoria_2_opt(Particle &p){
     int begin = 0;
     int desalinhamento = 0;
-    cout << "rotas iniciais: " << calcula_caminho(p.solucao_atual) << endl;
+    // cout << "rotas iniciais: " << calcula_caminho(p.solucao_atual) << endl;
     auto solucao = get_solution(p);
 
     for(int i = 1; i < solucao.size(); i++){
@@ -154,7 +154,7 @@ void PSO::melhorar_rota(vector<int> &rota, Particle &p, int begin, int end, int 
     // for(int i = begin; i < end; i++){
     //     cout << rota[i] << "-";
     // }
-    cout << endl;
+    
     while (improved) {
         improved = false;
         for (size_t i = begin + 1; i < end; ++i) {
@@ -166,16 +166,9 @@ void PSO::melhorar_rota(vector<int> &rota, Particle &p, int begin, int end, int 
                 // cout << "dist: " << old_dist << "/" << new_dist << endl;
                 // Se a nova distância for menor, aplica a troca
                 if (new_dist < old_dist) {
-                    cout << "Trocou! " << i << " e " << j << endl;
-                    // for(int i = begin; i < end; i++){
-                    //     cout << rota[i] << "-";
-                    // }
-                    // cout << endl;
+                    
                     std::reverse(rota.begin() + i, rota.begin() + j + 1);
-                    // for(int i = begin; i < end; i++){
-                    //     cout << rota[i] << "-";
-                    // }
-                    // cout << endl;
+                    
                     improved = true;
                 }
             }
