@@ -6,6 +6,7 @@ import re
 from openpyxl import load_workbook, Workbook
 from sys import argv
 from time import time
+from leitor_instancia import ler_instancia
 
 caminho_output = "./PSO_data.xlsx"
 
@@ -47,30 +48,17 @@ dados = [["Mínimo:"],
 
 valores = []
 
-nParticulas = [25, 50]
-nRepeticoes = [1000, 1000]
+nParticulas = [25]
+nRepeticoes = [100]
 
 count = 1
 
 for caso_teste in arquivos_teste:
+    print(caso_teste[-3:])
+    if caso_teste[-3:] != "vrp":
+        continue
 
-    test_file = open(caminho + caso_teste)
-
-    nome_instancia = test_file.readline().split(": ")[1]
-
-    line = test_file.readline()
-    try:
-        sol_otima = re.findall(r"COMMENT : \d+", line)[0]
-
-        if sol_otima:
-            sol_otima = sol_otima.split(":")[1]
-            
-    except IndexError:
-        sol_otima = str(float(re.findall(r"value: \d+", line)[0].split(":")[1]))
-    except ValueError:
-        sol_otima = '-'
-    
-    test_file.close()
+    instancia = ler_instancia(caso_teste)
 
     for c in range(len(nRepeticoes)):
 
@@ -105,7 +93,7 @@ for caso_teste in arquivos_teste:
 
         valores = []
 
-    ws.append([nome_instancia, sol_otima])
+    ws.append([instancia["NAME"], instancia["COMMENT"]])
     ws.append([])
 
     ws.append(["Partículas:"] + nParticulas)
