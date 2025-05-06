@@ -14,7 +14,8 @@
 
 unsigned time_seed = std::chrono::system_clock::now().time_since_epoch().count();
 
-void PSO::set_instance(string cities_file){
+void 
+PSO::set_instance(string cities_file){
     ifstream c_file(cities_file);
 
     string line;
@@ -83,7 +84,8 @@ void PSO::set_instance(string cities_file){
     this->best_particle.best_dist = INFINITO;
 }
 
-void PSO::set_properties(string config_file)
+void 
+PSO::set_properties(string config_file)
 {
     unordered_map<string, string> configs = Scanner::read_config(config_file);
 
@@ -100,7 +102,8 @@ void PSO::set_properties(string config_file)
     this->nRep = stoi(configs["nRep"]);
 }
 
-void PSO::executar(string routes_file){
+void 
+PSO::executar(string routes_file){
     ifstream r_file(routes_file);
     r_file >> nParticulas;
     
@@ -126,7 +129,8 @@ void PSO::executar(string routes_file){
 
 }
 
-void PSO::melhoria_2_opt(Particle &p){
+void 
+PSO::melhoria_2_opt(Particle &p){
     int begin = 0;
     int desalinhamento = 0;
     // cout << "rotas iniciais: " << calcula_caminho(p.solucao_atual) << endl;
@@ -148,7 +152,8 @@ void PSO::melhoria_2_opt(Particle &p){
     
 }
 
-void PSO::melhorar_rota(vector<int> &rota, Particle &p, int begin, int end, int des){
+void 
+PSO::melhorar_rota(vector<int> &rota, Particle &p, int begin, int end, int des){
     bool improved = true;
     // cout << "sub-rota inicial: " << calcula_caminho(rota, begin, end) << endl;
     // for(int i = begin; i < end; i++){
@@ -185,7 +190,8 @@ void PSO::melhorar_rota(vector<int> &rota, Particle &p, int begin, int end, int 
     // cout << endl << endl;
 }
 
-vector<int> PSO::get_solution(Particle &p)
+vector<int> 
+PSO::get_solution(Particle &p)
 {
     double distancia = 0;
     vector<int> sol;
@@ -216,7 +222,8 @@ vector<int> PSO::get_solution(Particle &p)
     return sol;
 }
 
-void PSO::apresentar(Particle &p){
+void 
+PSO::apresentar(Particle &p){
     double distancia = 0;
 
     auto sol = get_solution(p);
@@ -231,7 +238,116 @@ void PSO::apresentar(Particle &p){
     cout << "\n" << distancia << "\n";
 }
 
-void PSO::gerar_particulas(){
+int 
+PSO::soma_demanda(vector<int> &rota, int inicio, int fim){
+    
+    int d = 0;
+    // cout << "inicio: " << inicio << " fim: " << fim <<endl;
+    for(int i = inicio; i < fim; i++){
+        d += this->cidades[i].demanda;
+    }
+
+    return d;
+}
+
+int 
+PSO::melhor_r(vector<int> &rota, int begin){
+    
+    int melhor_r = begin;
+    int esquerda = begin;
+    int direita = rota.size();
+
+    // cout << "Begin: " << begin << endl;
+    // cout << "CAP: " << capacidadeV << endl;
+
+    // for(int i = begin; i < direita; i++){
+    //     cout << rota[i] << " ";
+    // }
+    // cout << endl;
+    while (esquerda <= direita)
+    {   
+        
+        int meio = (esquerda + direita) / 2;
+        int demanda_tot = soma_demanda(rota, begin, direita);
+        
+        if (demanda_tot == 0){
+            // cout << "Demanda 0\n";
+            break;
+        }
+
+        if(demanda_tot <= this->capacidadeV){
+            // cout << "Demanda menor: " << demanda_tot << endl;
+            melhor_r = meio;
+            esquerda = meio + 1;
+        }
+        else{
+            // cout << "Demanda maior: " << demanda_tot << endl;
+            direita = meio - 1;
+        }
+        
+    }
+    // cout << "Demanda: " << soma_demanda(rota, begin, melhor_r) << endl;
+    // for(int i = begin; i < melhor_r; i++){
+    //     cout << rota[i] << ",";
+    // }
+    // cout << endl;
+    return melhor_r;
+}
+
+void
+PSO::gerar_particulas_setorizadas(){
+    vector<int> indices(nCidades-1);
+    
+    for(int i = 0; i < nCidades-1; i++){
+        indices[i] = i+1;
+    }
+    
+    int p_sel = util::numero_aleatorio(nCidades-1);
+    
+    auto calcularDistanciaQuadrada = [&](int id) {
+        double dx = cidades[id].x - cidades[p_sel].x;
+        double dy = cidades[id].y - cidades[p_sel].y;
+        return dx*dx + dy*dy;
+    };
+    
+    auto compararDistancia = [&](int a, int b) {
+        return calcularDistanciaQuadrada(a) < calcularDistanciaQuadrada(b);
+    };
+
+    for(int p = 0; p < this->nParticulas; p++){
+        
+        vector<int> rota{0};
+        
+        int esq = 0;
+        int r = 0;
+        int a = 0;
+        do{
+            // cout << "esq: " << esq << endl;
+            // cout << "r:" << r << endl;
+            std::sort(indices.begin() + esq, indices.end(), compararDistancia);
+
+            r = melhor_r(indices, esq);
+            
+            r = r == esq ? r+1 : r;
+
+            for(int i = esq; i < r; i++)
+                rota.push_back(indices[i]);
+
+            esq = r;
+            
+            p_sel = esq < indices.size() ? indices[r] : util::numero_aleatorio(nCidades-1);
+            
+        }while (r < indices.size());
+        
+        rota.push_back(0);
+
+        this->particulas.push_back(Particle(rota));
+    }
+    
+}
+
+void 
+PSO::gerar_particulas(){
     vector<int> rota(nCidades + 1);
     for(int i = 0; i < nCidades; i++){
         rota[i] = i;
@@ -248,7 +364,8 @@ void PSO::gerar_particulas(){
     }
 }
 
-void PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
+void 
+PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
 
     double f_value; //Resultado da função fitness
     Particle *g_best; // Melhor partícula da iteração
@@ -261,13 +378,14 @@ void PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
         for(Particle& p: particulas){
             
             f_value = calcula_caminho(p.solucao_atual);
+            
             p.dist_atual = f_value;
             // Atualiza o p_best da partícula i
             if(f_value < p.best_dist){
                 p.best_dist = f_value;    
                 p.p_best = p.solucao_atual;
             }
-
+        
             if(seguir_qualquer > 0 && i % seguir_qualquer == 0 && nSalvas < solucoes.size()){
                 util::guarda_solucao(solucoes[nSalvas++], i, f_value, get_solution(p));
             }
@@ -282,8 +400,8 @@ void PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
                     make_heap(elite.begin(), elite.end());
                 }
             }
+            
         }
-        
 
         if(seguir_melhor > 0 && i % seguir_melhor == 0){
             util::guarda_solucao(solucoes[0], i, elite[0]->dist_atual, get_solution(*elite[0]));
@@ -293,12 +411,12 @@ void PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
         for(int e = 0; e < elite.size(); e++){
             melhoria_2_opt(*elite[e]);
         }
-        make_heap(elite.begin(), elite.end(), particle_cmp);
-
+        
         if(seguir_melhor > 0 && i % seguir_melhor == 0){
             util::guarda_solucao(solucoes[0], i, elite[0]->dist_atual, get_solution(*elite[0]));
         }
-
+        
+        make_heap(elite.begin(), elite.end(), particle_cmp);
         // Atualiza o melhor resultado de todas as iterações
 
         if(elite[0]->dist_atual < this->best_particle.best_dist){
@@ -327,12 +445,16 @@ void PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
     
 }
 
-double PSO::calcula_caminho(std::vector<int> caminho){ //Fitness function
+double 
+PSO::calcula_caminho(std::vector<int> caminho){ //Fitness function
     double distancia = 0;
     int capcAtual = this->capacidadeV;
-
+    // cout << "nCidades: " << nCidades << endl;
     for(int i = 0; i < nCidades; i++){
 
+        // cout << "i+1: " << i+1 << endl;
+        // cout << "c: " << caminho[i+1] << endl;
+        // cout << ", v: "<< this->cidades[caminho[i+1]].demanda << "\n";
         if(this->cidades[caminho[i+1]].demanda > this->capacidadeV){
             throw invalid_argument("Cliente com demanda maior que o esperado!\n");
             
@@ -354,7 +476,8 @@ double PSO::calcula_caminho(std::vector<int> caminho){ //Fitness function
     return distancia;
 }
 
-double PSO::calcula_caminho(vector<int> caminho, int begin, int end){
+double 
+PSO::calcula_caminho(vector<int> caminho, int begin, int end){
     double distancia = 0;
     for(int i = begin; i < end; i++){
         distancia += calcula_distancia(cidades[i], cidades[i+1]);

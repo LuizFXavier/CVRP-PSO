@@ -13,6 +13,7 @@ class PSO
 private:
     void main_loop(std::vector<std::vector<Solucao>> &solucoes);
     void gerar_particulas();
+    void gerar_particulas_setorizadas();
 
     int deposito; //id da localidade do depósito na lista de cidades
 
@@ -26,13 +27,14 @@ private:
 
     Particle best_particle;
     double best_dist = INFINITO;
-public:
-
+    public:
+    
     int nCidades;
     string instance_name = "";
     vector<Cidade> cidades;
     vector<Particle> particulas;
-
+    
+    bool setorizar = false; // Sees
     int seguir_melhor = 0; //Frequência em que o resultado da melhor partícula é guardado
     int seguir_qualquer = 0; //Frequência em que os resultado de partículas quaisquer são guardados
 
@@ -43,7 +45,7 @@ public:
     void executar(string routes_file);
 
     void executar(std::vector<std::vector<Solucao>> &solucoes){
-        gerar_particulas();
+        if(!setorizar) gerar_particulas(); else gerar_particulas_setorizadas();
         main_loop(solucoes);};
 
     double calcula_distancia(Cidade &a, Cidade &b){ return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2));}
@@ -62,9 +64,15 @@ public:
 
     void set_elite(string n){this->tam_elite = stoi(n);}
 
+    void set_setorizar(bool s){this->setorizar = s;};
+
     void melhoria_2_opt(Particle &p);
 
     void melhorar_rota(vector<int> &rota, Particle &p, int begin, int end, int des);
+
+    int melhor_r(vector<int> &rota, int begin);
+
+    int soma_demanda(vector<int> &rota, int begin, int end);
 
     vector<int> get_solution(Particle &p);
 
