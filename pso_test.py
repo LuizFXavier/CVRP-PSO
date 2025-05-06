@@ -8,9 +8,7 @@ from sys import argv
 from time import time
 from leitor_instancia import ler_instancia
 
-caminho_output = "./PSO_data.xlsx"
-
-NUM_TESTES = 1
+NUM_TESTES = 10
 instance = ""
 
 arquivos_teste = []
@@ -25,9 +23,15 @@ elif argv[1].upper() == "-D":
     caminho = argv[2]
     if caminho[-1] != '/':
         caminho += '/'
-
 else:
     raise Exception("Não se sabe se é arquivo ou diretório!")
+
+caminho_output = "./PSO_data.xlsx"
+
+if len(argv) == 4:
+    caminho_output = argv[3]
+
+arquivos_teste.sort()
 
 wb = None
 ws = None
@@ -49,23 +53,31 @@ dados = [["Mínimo:"],
 valores = []
 
 nParticulas = [25]
-nRepeticoes = [100]
+nRepeticoes = [5000]
+nElite = [5]
+setorizado = [True]
 
 count = 1
 
 for caso_teste in arquivos_teste:
-    print(caso_teste[-3:])
+    print(caso_teste)
     if caso_teste[-3:] != "vrp":
         continue
 
-    instancia = ler_instancia(caso_teste)
+    instancia = ler_instancia(caminho + caso_teste)
 
     for c in range(len(nRepeticoes)):
 
         print("CONFIG", c)
         
         tempo = time()
+        
+        s = ""
+        if(setorizado[c]):
+            s = "-setorizar"
+
         for i in range(1, NUM_TESTES +1):
+
             output = subprocess.check_output([
                             "./vrp_pso",
                             "-instancia",
@@ -77,7 +89,8 @@ for caso_teste in arquivos_teste:
                             "-seguir-melhor",
                             "10",
                             "-elite",
-                            "5"]
+                            str(nElite[c]),
+                            s]
                             ).decode()
             print(i)
             valores.append(float(output))
@@ -98,6 +111,8 @@ for caso_teste in arquivos_teste:
 
     ws.append(["Partículas:"] + nParticulas)
     ws.append(["Repetições:"] + nRepeticoes)
+    ws.append(["Elite"] + nElite)
+    ws.append(["Setorizar"] + setorizado)
     ws.append([])
 
     #Colocar na tabela e resetar dados para partir para a próxima entrada
