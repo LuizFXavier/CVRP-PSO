@@ -52,10 +52,10 @@ dados = [["Mínimo:"],
 
 valores = []
 
-nParticulas = [25]
-nRepeticoes = [5000]
-nElite = [5]
-setorizado = [True]
+nParticulas = [25 for i in range(4)]
+nRepeticoes = [5000 for i in range(4)]
+nElite = [0, 5, 12, 25]
+setorizado = [True for i in range (4)]
 
 count = 1
 
