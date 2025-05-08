@@ -408,12 +408,12 @@ PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
         }
         // Aplica a heurística de melhoria
 
-        for(int e = 0; e < elite.size(); e++){
-            melhoria_2_opt(*elite[e]);
-        }
-        
-        if(seguir_melhor > 0 && i % seguir_melhor == 0){
-            util::guarda_solucao(solucoes[0], i, elite[0]->dist_atual, get_solution(*elite[0]));
+        if(tam_elite != 0){
+            for(int e = 0; e < elite.size(); e++)
+                melhoria_2_opt(*elite[e]);
+            
+            if(seguir_melhor > 0 && i % seguir_melhor == 0)
+                util::guarda_solucao(solucoes[0], i, elite[0]->dist_atual, get_solution(*elite[0]));
         }
         
         make_heap(elite.begin(), elite.end(), particle_cmp);
