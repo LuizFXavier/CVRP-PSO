@@ -20,12 +20,12 @@ int main(int argc, char * argv[]){
     cout << pso.get_best().best_dist << endl;
 
     if(pso.seguir_melhor){
-        util::salva_solucoes(solucoes_particulas[0], pso.instance_name, pso.getNPart(), pso.getNRep(), -1, pso.setorizar);
+        util::salva_solucoes(solucoes_particulas[0], pso.instance_name, pso.getNPart(), pso.getNRep(), -1, pso.setorizar, pso.tam_elite);
     }
 
     for (int i = 1; i < solucoes_particulas.size(); i++){
 
-        util::salva_solucoes(solucoes_particulas[i], pso.instance_name, pso.getNPart(), pso.getNRep(), i-1, pso.setorizar);
+        util::salva_solucoes(solucoes_particulas[i], pso.instance_name, pso.getNPart(), pso.getNRep(), i-1, pso.setorizar, pso.tam_elite);
     }
     
     return EXIT_SUCCESS;
