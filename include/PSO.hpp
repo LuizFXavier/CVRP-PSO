@@ -2,7 +2,9 @@
 #include <vector>
 #include <string>
 #include <cmath>
+#include <memory>
 #include "Cidade.hpp"
+#include "LocalSearch.h"
 #include "Particle.hpp"
 #include "Solucao.hpp"
 #define INFINITO 0xfffffff
@@ -28,10 +30,11 @@ private:
     int capacidadeV; //Capacidade dos veículos
     int deposito; //id da localidade do depósito na lista de cidades
 
+    std::unique_ptr<LocalSearch> localSearch;
     public:
     
     int nCidades;
-    string instance_name = "";
+    string instance_name{};
     vector<Cidade> cidades;
     vector<Particle> particulas;
     
@@ -40,15 +43,11 @@ private:
     int seguir_qualquer = 0; //Frequência em que os resultado de partículas quaisquer são guardados
 
     int tam_elite = 0;
-    
-    double calcula_caminho(vector<int> caminho); //Fitness function
-    double calcula_caminho(vector<int> caminho, int begin, int end);
+
     void executar(string routes_file);
 
     void executar(std::vector<std::vector<Solucao>> &solucoes);
 
-    double calcula_distancia(Cidade &a, Cidade &b){ return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2));}
-    double calcula_distancia(int a, int b){return calcula_distancia(cidades[a], cidades[b]);}
     void set_instance(string config_file);
     
     void set_properties(string config_file);
@@ -64,10 +63,7 @@ private:
     void set_elite(string n){this->tam_elite = stoi(n);}
 
     void set_setorizar(string s){this->setorizar = stoi(s);};
-
-    void melhoria_2_opt(Particle &p);
-
-    void melhorar_rota(vector<int> &rota, Particle &p, int begin, int end, int des);
+    void set_setorizar(bool s){this->setorizar = this->nParticulas;};
 
     int melhor_r(vector<int> &rota, int begin);
 
@@ -75,8 +71,8 @@ private:
 
     vector<int> get_solution(Particle &p);
 
-    inline int getNPart(){return this->nParticulas;}
-    inline int getNRep(){return this->nRep;}
+    int getNPart() const {return this->nParticulas;}
+    int getNRep() const{return this->nRep;}
 
     void apresentar(Particle &p);
 

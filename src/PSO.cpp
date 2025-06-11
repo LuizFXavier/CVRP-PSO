@@ -82,6 +82,7 @@ PSO::set_instance(string cities_file){
     
     c_file.close();
     this->best_particle.best_dist = INFINITO;
+    this->localSearch = std::make_unique<LocalSearch>(this->cidades, this->capacidadeV);
 }
 
 void 
@@ -129,113 +130,21 @@ PSO::executar(string routes_file){
 
 }
 
-void 
-PSO::melhoria_2_opt(Particle &p){
-    int begin = 0;
-    int desalinhamento = 0;
-    // cout << "rotas iniciais: " << calcula_caminho(p.solucao_atual) << endl;
-    auto solucao = get_solution(p);
-
-    for(int i = 1; i < solucao.size(); i++){
-        if(solucao[i] == 0){
-            melhorar_rota(solucao, p, begin, i, desalinhamento);
-            begin = i;
-            desalinhamento++;
-        }
-    }
-    p.dist_atual = calcula_caminho(p.solucao_atual);
-
-    if(p.best_dist > p.dist_atual){
-        p.best_dist = p.dist_atual;
-        p.p_best = p.solucao_atual;
-    }
-    
-}
-
-void 
-PSO::melhorar_rota(vector<int> &rota, Particle &p, int begin, int end, int des){
-    bool improved = true;
-    // cout << "sub-rota inicial: " << calcula_caminho(rota, begin, end) << endl;
-    // for(int i = begin; i < end; i++){
-    //     cout << rota[i] << "-";
-    // }
-    
-    while (improved) {
-        improved = false;
-        for (size_t i = begin + 1; i < end; ++i) {
-            for (size_t j = i + 1; j < end; ++j) {
-                // Calcula a distância antes da troca
-                double old_dist = calcula_distancia(rota[i-1], rota[i]) + calcula_distancia(rota[j], rota[(j+1)]);
-                // Distância após a troca (2-opt swap)
-                double new_dist = calcula_distancia(rota[i-1], rota[j]) + calcula_distancia(rota[i], rota[(j+1)]);
-                // cout << "dist: " << old_dist << "/" << new_dist << endl;
-                // Se a nova distância for menor, aplica a troca
-                if (new_dist < old_dist) {
-                    
-                    std::reverse(rota.begin() + i, rota.begin() + j + 1);
-                    
-                    improved = true;
-                }
-            }
-        }
-    }
-    for(int i = begin + 1; i < end; i++){
-        p.solucao_atual[i - des] = rota[i];
-    }
-    // cout << "sub-rota otimizada: " << calcula_caminho(rota, begin, end) << endl;
-    // cout << "sub-rota inicial: " << calcula_caminho(rota, begin, end) << endl;
-    // for(int i = begin; i < end; i++){
-    //     cout << rota[i] << "-";
-    // }
-    // cout << endl << endl;
-}
-
 vector<int> 
 PSO::get_solution(Particle &p)
 {
-    double distancia = 0;
-    vector<int> sol;
-    int capcAtual = this->capacidadeV;
-    sol.push_back(0);
-
-    for(int i = 0; i < nCidades; i++){
-        
-        if(this->cidades[p.solucao_atual[i+1]].demanda <= capcAtual){
-            
-            capcAtual -= this->cidades[p.solucao_atual[i + 1]].demanda;
-
-            distancia += calcula_distancia(cidades[p.solucao_atual[i]], cidades[p.solucao_atual[i+1]]);
-
-            sol.push_back(p.solucao_atual[i+1]);
-        }
-        else{
-            distancia += calcula_distancia(cidades[p.solucao_atual[i]], cidades[0]);
-            sol.push_back(0);
-            capcAtual = this->capacidadeV;
-
-            distancia += calcula_distancia(cidades[0], cidades[p.solucao_atual[i+1]]);
-            sol.push_back(p.solucao_atual[i+1]);
-            capcAtual -= this->cidades[p.solucao_atual[i+1]].demanda;
-        }
-        
-    }
-    return sol;
+    return p.get_full_solution(cidades, capacidadeV);
 }
 
 void 
 PSO::apresentar(Particle &p){
-    double distancia = 0;
 
-    auto sol = get_solution(p);
+    for(auto &c : p.get_full_solution(cidades, capacidadeV)){
 
-    for(int i = 0; i < sol.size() - 1; i++){
-        
-        distancia += calcula_distancia(cidades[sol[i]], cidades[sol[i+1]]);
-        cout << sol[i] << " ";
+        cout << c << " ";
     }
-    cout << sol[sol.size() - 1];
 
-    cout << "\n" << distancia << "\n";
+    cout << "\n" << p.dist_atual << "\n";
 }
 
 int 
@@ -314,7 +223,7 @@ PSO::gerar_particulas_setorizadas(){
         return calcularDistanciaQuadrada(a) < calcularDistanciaQuadrada(b);
     };
 
-    for(int p = 0; p < this->setorizar; p++){
+    for(int p = 0; p < this->setorizar && p < this->nParticulas; p++){
         
         vector<int> rota{0};
         
@@ -364,42 +273,35 @@ PSO::gerar_particulas_aleatorias(){
 void 
 PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
 
-    double f_value; //Resultado da função fitness
     Particle *g_best; // Melhor partícula da iteração
-    auto particle_cmp = [](const Particle* a, const Particle* b) { return a->dist_atual > b->dist_atual; };
+    auto min_particle_cmp = [](const Particle* a, const Particle* b) { return a->dist_atual > b->dist_atual; };
+    auto max_particle_cmp = [](const Particle* a, const Particle* b) { return a->dist_atual < b->dist_atual; };
 
     for(int i = 0; i < nRep; i++){
         int nSalvas = 1;
         vector<Particle*> elite;
 
         for(Particle& p: particulas){
-            
-            f_value = calcula_caminho(p.solucao_atual);
-            
-            p.dist_atual = f_value;
-            // Atualiza o p_best da partícula i
-            if(f_value < p.best_dist){
-                p.best_dist = f_value;    
-                p.p_best = p.solucao_atual;
-            }
+
+            p.atualiza_dist(cidades, capacidadeV);
         
             if(seguir_qualquer > 0 && i % seguir_qualquer == 0 && nSalvas < solucoes.size()){
-                util::guarda_solucao(solucoes[nSalvas++], i, f_value, get_solution(p));
+                util::guarda_solucao(solucoes[nSalvas++], i, p.dist_atual, get_solution(p));
             }
 
-            if(elite.size() == 0 || (tam_elite != 0 && elite.size() < tam_elite)){
+            if(elite.empty() || (tam_elite != 0 && elite.size() < tam_elite)){
                 elite.push_back(&p);
-                make_heap(elite.begin(), elite.end());
+                make_heap(elite.begin(), elite.end(), max_particle_cmp);
             }
             else{
                 if(p.dist_atual < elite[0]->dist_atual){
                     elite[0] = &p;
-                    make_heap(elite.begin(), elite.end());
+                    make_heap(elite.begin(), elite.end(), max_particle_cmp);
                 }
             }
             
         }
-        make_heap(elite.begin(), elite.end(), particle_cmp);
+        make_heap(elite.begin(), elite.end(), min_particle_cmp);
 
         if(seguir_melhor > 0 && i % seguir_melhor == 0){
             util::guarda_solucao(solucoes[0], i, elite[0]->dist_atual, get_solution(*elite[0]));
@@ -407,14 +309,14 @@ PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
         // Aplica a heurística de melhoria
 
         if(tam_elite != 0){
-            for(int e = 0; e < elite.size(); e++)
-                melhoria_2_opt(*elite[e]);
+            for(auto & e : elite)
+                localSearch->melhoria_2_opt(*e);
             
             if(seguir_melhor > 0 && i % seguir_melhor == 0)
                 util::guarda_solucao(solucoes[0], i, elite[0]->dist_atual, get_solution(*elite[0]));
         }
         
-        make_heap(elite.begin(), elite.end(), particle_cmp);
+        make_heap(elite.begin(), elite.end(), min_particle_cmp);
         // Atualiza o melhor resultado de todas as iterações
 
         if(elite[0]->dist_atual < this->best_particle.best_dist){
@@ -432,53 +334,12 @@ PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
             
             double w = w_max - (w_max - w_min)/nRep * i;
 
-            Velocity v = p.velocity * w + (p_best - p) * c1 * r1  + (*g_best - p) * c2 * r2;
-            p.velocity = v;
+            p.velocity = p.velocity * w + (p_best - p) * c1 * r1  + (*g_best - p) * c2 * r2;
             
-            p.aplicar_velocidade(v);
+            p.aplicar_velocidade(p.velocity);
 
         }
         
     }
     
-}
-
-double 
-PSO::calcula_caminho(std::vector<int> caminho){ //Fitness function
-    double distancia = 0;
-    int capcAtual = this->capacidadeV;
-    // cout << "nCidades: " << nCidades << endl;
-    for(int i = 0; i < nCidades; i++){
-
-        // cout << "i+1: " << i+1 << endl;
-        // cout << "c: " << caminho[i+1] << endl;
-        // cout << ", v: "<< this->cidades[caminho[i+1]].demanda << "\n";
-        if(this->cidades[caminho[i+1]].demanda > this->capacidadeV){
-            throw invalid_argument("Cliente com demanda maior que o esperado!\n");
-            
-        }
-        
-        if(this->cidades[caminho[i+1]].demanda <= capcAtual){
-            capcAtual -= this->cidades[caminho[i + 1]].demanda;
-
-            distancia += calcula_distancia(this->cidades[caminho[i]], this->cidades[caminho[i+1]]);
-        }
-        else{
-            distancia += calcula_distancia(this->cidades[caminho[i]], this->cidades[0]);
-            capcAtual = this->capacidadeV;
-            distancia += calcula_distancia(this->cidades[0], this->cidades[caminho[i+1]]);
-            capcAtual -= this->cidades[caminho[i+1]].demanda;
-        }
-        
-    }
-    return distancia;
-}
-
-double 
-PSO::calcula_caminho(vector<int> caminho, int begin, int end){
-    double distancia = 0;
-    for(int i = begin; i < end; i++){
-        distancia += calcula_distancia(cidades[i], cidades[i+1]);
-    }
-    return distancia;
 }

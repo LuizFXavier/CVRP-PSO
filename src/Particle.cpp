@@ -53,3 +53,51 @@ void Particle::aplicar_velocidade(Velocity &v)
         }
     }
 }
+
+vector<int>
+Particle::get_full_solution(vector<Cidade> &cidades, int capacidade) {
+
+    vector<int> sol;
+    int capcAtual = capacidade;
+    sol.push_back(0);
+
+    for(int i = 0; i < cidades.size(); i++){
+
+        if(cidades[this->solucao_atual[i+1]].demanda <= capcAtual){
+            capcAtual -= cidades[this->solucao_atual[i + 1]].demanda;
+            sol.push_back(this->solucao_atual[i+1]);
+        }
+        else{
+            sol.push_back(0);
+            capcAtual = capacidade;
+            sol.push_back(this->solucao_atual[i+1]);
+            capcAtual -= cidades[this->solucao_atual[i+1]].demanda;
+        }
+
+    }
+    return sol;
+}
+
+double
+Particle::fitness(vector<Cidade> &cidades, int capacidade) {
+
+    double distancia = 0;
+    int capcAtual = capacidade;
+
+    for(int i = 0; i < cidades.size(); i++){
+
+        if(cidades[this->solucao_atual[i+1]].demanda <= capcAtual){
+
+            capcAtual -= cidades[this->solucao_atual[i + 1]].demanda;
+            distancia += Cidade::distancia(cidades[this->solucao_atual[i]], cidades[this->solucao_atual[i+1]]);
+        }
+        else{
+            distancia += Cidade::distancia(cidades[this->solucao_atual[i]], cidades[0]);
+            capcAtual = capacidade;
+            distancia += Cidade::distancia(cidades[0], cidades[this->solucao_atual[i+1]]);
+            capcAtual -= cidades[this->solucao_atual[i+1]].demanda;
+        }
+
+    }
+    return distancia;
+}

@@ -24,7 +24,7 @@ util::salva_solucoes
 
     std::string part = qual < 0 ? "_best" : std::string("_") + std::to_string(qual);
 
-    std::string nome_arquivo = "./resultado/";
+    std::string nome_arquivo = "/mnt/c/Projetos/LSCAD/CVRP-PSO/resultado/";
     nome_arquivo += instance_name;
     nome_arquivo += part;
     nome_arquivo += std::string("_nPart-") + to_string(nPart);
@@ -37,10 +37,10 @@ util::salva_solucoes
 
     std::ofstream arquivo(nome_arquivo);
 
-    arquivo << "Iteração;Custo;Rota\n";
+    arquivo << "Iteração,Custo,Rota\n";
     
     for (const auto& sol : solutions) {
-        arquivo << sol.iteracao << ";" << sol.custo << ";";
+        arquivo << sol.iteracao << "," << sol.custo << ",";
         
         // Escreve a rota
         for (size_t i = 0; i < sol.rota.size(); ++i) {

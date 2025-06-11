@@ -3,6 +3,7 @@
 #include <utility>
 #include <unordered_map>
 #include "Velocity.hpp"
+#include "Cidade.hpp"
 #define INFINITO 0xfffffff
 
 using namespace std;
@@ -21,5 +22,14 @@ public:
     bool operator>(const Particle &p1) const {return this->dist_atual > p1.dist_atual;}
     Velocity operator-(Particle &p1);
     void aplicar_velocidade(Velocity &v);
+    vector<int> get_full_solution(vector<Cidade> &cidades, int capacidade);
+    double fitness(vector<Cidade> &cidades, int capacidade);
 
+    void atualiza_dist(vector<Cidade> &cidades, int capacidade) {
+        this->dist_atual = fitness(cidades, capacidade);
+        if (this->dist_atual < this->best_dist) {
+            this->best_dist = this->dist_atual;
+            this->p_best = this->solucao_atual;
+        }
+    }
 };
