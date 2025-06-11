@@ -20,7 +20,7 @@ util::numero_aleatorio(int n) {
 
 void
 util::salva_solucoes
-(std::vector<Solucao> &solutions, std::string instance_name, int nPart, int nRep, int qual, bool set, int elite){
+(std::vector<Solucao> &solutions, std::string instance_name, int nPart, int nRep, int qual, int set, int elite){
 
     std::string part = qual < 0 ? "_best" : std::string("_") + std::to_string(qual);
 
@@ -31,7 +31,7 @@ util::salva_solucoes
     nome_arquivo += std::string("_nRep-") + to_string(nRep);
     nome_arquivo += std::string("_elt-") + to_string(elite);
     if(set){
-        nome_arquivo += std::string("_setor");
+        nome_arquivo += std::string("_setor-") + to_string(set);
     }
     nome_arquivo += std::string(".csv");
 

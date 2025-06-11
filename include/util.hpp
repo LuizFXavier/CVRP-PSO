@@ -12,5 +12,5 @@ namespace util
         sol.push_back({iteracao, custo, rota});
     }
     int numero_aleatorio(int n);
-    void salva_solucoes(std::vector<Solucao> &solutions, std::string instance_name, int nPart, int nRep, int qual, bool set, int elite);
+    void salva_solucoes(std::vector<Solucao> &solutions, std::string instance_name, int nPart, int nRep, int qual, int set, int elite);
 } // namespace util

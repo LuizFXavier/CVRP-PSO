@@ -13,20 +13,21 @@ class PSO
 private:
     void main_loop(std::vector<std::vector<Solucao>> &solucoes);
     void gerar_particulas();
+    void gerar_particulas_aleatorias();
     void gerar_particulas_setorizadas();
 
-    int deposito; //id da localidade do depósito na lista de cidades
-
-    int nParticulas = 10;
+    Particle best_particle;
+    double best_dist = INFINITO;
+    
     double c1 = 1;  //Coeficiente cognitivo
     double c2 = 1;  //Coeficiente social
     double w_min = 0.1; //Coeficiente de inércia mínimo
     double w_max = 1; //Coeficiente de inércia máximo
     int nRep = 10;  //Número de iterações a serem performadas
+    int nParticulas = 10;
     int capacidadeV; //Capacidade dos veículos
+    int deposito; //id da localidade do depósito na lista de cidades
 
-    Particle best_particle;
-    double best_dist = INFINITO;
     public:
     
     int nCidades;
@@ -34,7 +35,7 @@ private:
     vector<Cidade> cidades;
     vector<Particle> particulas;
     
-    bool setorizar = false; // Sees
+    int setorizar = 0; // Quantidade de partículas que passam pela setorização
     int seguir_melhor = 0; //Frequência em que o resultado da melhor partícula é guardado
     int seguir_qualquer = 0; //Frequência em que os resultado de partículas quaisquer são guardados
 
@@ -44,9 +45,7 @@ private:
     double calcula_caminho(vector<int> caminho, int begin, int end);
     void executar(string routes_file);
 
-    void executar(std::vector<std::vector<Solucao>> &solucoes){
-        if(!setorizar) gerar_particulas(); else gerar_particulas_setorizadas();
-        main_loop(solucoes);};
+    void executar(std::vector<std::vector<Solucao>> &solucoes);
 
     double calcula_distancia(Cidade &a, Cidade &b){ return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2));}
     double calcula_distancia(int a, int b){return calcula_distancia(cidades[a], cidades[b]);}
@@ -64,7 +63,7 @@ private:
 
     void set_elite(string n){this->tam_elite = stoi(n);}
 
-    void set_setorizar(bool s){this->setorizar = s;};
+    void set_setorizar(string s){this->setorizar = stoi(s);};
 
     void melhoria_2_opt(Particle &p);
 
@@ -83,3 +82,18 @@ private:
 
     Particle& get_best(){return this->best_particle;};
 };
+
+void inline
+PSO::gerar_particulas(){
+    if(this->setorizar)
+        gerar_particulas_setorizadas();
+    
+    if(this->setorizar < this->nParticulas)
+        gerar_particulas_aleatorias();
+}
+
+void inline
+PSO::executar(std::vector<std::vector<Solucao>> &solucoes){
+    gerar_particulas();
+    main_loop(solucoes);
+}

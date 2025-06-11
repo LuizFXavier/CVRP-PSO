@@ -41,8 +41,8 @@ CommandLine::CommandLine(int argc, char* argv[], PSO &pso, std::vector<std::vect
         else if(std::string(argv[i]) == "-elite" && i+1 < argc){
             pso.set_elite(argv[i+1]);
         }
-        else if(std::string(argv[i]) == "-setorizar"){
-            pso.set_setorizar(true);
+        else if(std::string(argv[i]) == "-setorizar" && i+1 < argc){
+            pso.set_setorizar(argv[i+1]);
         }
     }
 }

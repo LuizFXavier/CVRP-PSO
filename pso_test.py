@@ -54,8 +54,8 @@ valores = []
 
 nParticulas = [25 for i in range(4)]
 nRepeticoes = [5000 for i in range(4)]
-nElite = [0, 5, 12, 25]
-setorizado = [True for i in range (4)]
+nElite = [5, 5, 5, 5]
+setorizado = [5, 10, 15, 20]
 
 count = 1
 
@@ -71,10 +71,6 @@ for caso_teste in arquivos_teste:
         print("CONFIG", c)
         
         tempo = time()
-        
-        s = ""
-        if(setorizado[c]):
-            s = "-setorizar"
 
         for i in range(1, NUM_TESTES +1):
 
@@ -90,7 +86,9 @@ for caso_teste in arquivos_teste:
                             "10",
                             "-elite",
                             str(nElite[c]),
-                            s]
+                            "-setorizar",
+                            str(setorizado[c])
+                            ]
                             ).decode()
             print(i)
             valores.append(float(output))

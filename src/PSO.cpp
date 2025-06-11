@@ -314,7 +314,7 @@ PSO::gerar_particulas_setorizadas(){
         return calcularDistanciaQuadrada(a) < calcularDistanciaQuadrada(b);
     };
 
-    for(int p = 0; p < this->nParticulas; p++){
+    for(int p = 0; p < this->setorizar; p++){
         
         vector<int> rota{0};
         
@@ -322,8 +322,6 @@ PSO::gerar_particulas_setorizadas(){
         int r = 0;
         int a = 0;
         do{
-            // cout << "esq: " << esq << endl;
-            // cout << "r:" << r << endl;
             std::sort(indices.begin() + esq, indices.end(), compararDistancia);
 
             r = melhor_r(indices, esq);
@@ -346,16 +344,15 @@ PSO::gerar_particulas_setorizadas(){
     
 }
 
-void 
-PSO::gerar_particulas(){
+void
+PSO::gerar_particulas_aleatorias(){
     vector<int> rota(nCidades + 1);
     for(int i = 0; i < nCidades; i++){
         rota[i] = i;
     }
     rota[nCidades] = rota[0];
     
-    
-    for(int i = 0; i < nParticulas; i++){
+    for(int i = this->particulas.size(); i < nParticulas; i++){
         shuffle(rota.begin() + 1, rota.end() - 1, default_random_engine(time_seed));
         
         rota[nCidades] = rota[0];
@@ -402,6 +399,7 @@ PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
             }
             
         }
+        make_heap(elite.begin(), elite.end(), particle_cmp);
 
         if(seguir_melhor > 0 && i % seguir_melhor == 0){
             util::guarda_solucao(solucoes[0], i, elite[0]->dist_atual, get_solution(*elite[0]));
