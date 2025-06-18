@@ -40,7 +40,7 @@ private:
     
     int setorizar = 0; // Quantidade de partículas que passam pela setorização
     int seguir_melhor = 0; //Frequência em que o resultado da melhor partícula é guardado
-    int seguir_qualquer = 0; //Frequência em que os resultado de partículas quaisquer são guardados
+    int seguir_qualquer = 0; //Frequência em que os resultados de partículas quaisquer são guardados
 
     int tam_elite = 0;
 

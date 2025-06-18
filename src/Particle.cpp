@@ -3,6 +3,10 @@
 #include <unordered_map>
 #include "Particle.hpp"
 
+int Particle::capacidadeV = 0;
+vector<Cidade> c;
+vector<Cidade>& Particle::cidades = c;
+
 Velocity Particle::operator-(Particle &p1)
 {
     Velocity v;
@@ -18,9 +22,10 @@ Velocity Particle::operator-(Particle &p1)
     
     for(int i = 0; i < p1.solucao_atual.size(); i++){
         int t = this->solucao_atual[i];
-
+        cout << "antes while\n";
+        int a = 0;
         while(t != caminho_aux[i]){
-            
+            cout << "loopando no while - " << ++a << "\n";
             int k = positions[caminho_aux[i]];
             v.value.push_back(pair(i, k));
             int temp = caminho_aux[i];
@@ -55,10 +60,10 @@ void Particle::aplicar_velocidade(Velocity &v)
 }
 
 vector<int>
-Particle::get_full_solution(vector<Cidade> &cidades, int capacidade) {
+Particle::get_full_solution() const {
 
     vector<int> sol;
-    int capcAtual = capacidade;
+    int capcAtual = capacidadeV;
     sol.push_back(0);
 
     for(int i = 0; i < cidades.size(); i++){
@@ -69,12 +74,43 @@ Particle::get_full_solution(vector<Cidade> &cidades, int capacidade) {
         }
         else{
             sol.push_back(0);
-            capcAtual = capacidade;
+            capcAtual = capacidadeV;
             sol.push_back(this->solucao_atual[i+1]);
             capcAtual -= cidades[this->solucao_atual[i+1]].demanda;
         }
 
     }
+    return sol;
+}
+
+vector<int>
+Particle::get_full_solution(std::vector<std::pair<unsigned, unsigned>> &delm) const {
+    vector<int> sol;
+    int capcAtual = capacidadeV;
+    sol.emplace_back(0);
+
+    delm.emplace_back(0, 0);
+
+    for(int i = 0; i < cidades.size(); i++){
+
+        if(cidades[this->solucao_atual[i+1]].demanda <= capcAtual){
+            capcAtual -= cidades[this->solucao_atual[i + 1]].demanda;
+            sol.emplace_back(this->solucao_atual[i+1]);
+        }
+        else{
+            delm.back().second = sol.size();
+            if (i < cidades.size() - 1) {
+                delm.emplace_back(sol.size(), 0);
+            }
+            sol.emplace_back(0);
+
+            capcAtual = capacidadeV;
+            sol.emplace_back(this->solucao_atual[i+1]);
+            capcAtual -= cidades[this->solucao_atual[i+1]].demanda;
+        }
+
+    }
+    delm.back().second = sol.size() - 1;
     return sol;
 }
 

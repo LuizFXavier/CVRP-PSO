@@ -17,7 +17,7 @@ int main(int argc, char * argv[]){
 
     pso.executar(solucoes_particulas);
 
-    cout << pso.get_best().best_dist << endl;
+    // cout << pso.get_best().best_dist << endl;
 
     if(pso.seguir_melhor){
         util::salva_solucoes(solucoes_particulas[0], pso.instance_name, pso.getNPart(), pso.getNRep(), -1, pso.setorizar, pso.tam_elite);

@@ -9,6 +9,7 @@
 #include <regex>
 #include "Cidade.hpp"
 #include "PSO.hpp"
+#include "Particle.hpp"
 #include "Scanner.hpp"
 #include "util.hpp"
 
@@ -83,6 +84,9 @@ PSO::set_instance(string cities_file){
     c_file.close();
     this->best_particle.best_dist = INFINITO;
     this->localSearch = std::make_unique<LocalSearch>(this->cidades, this->capacidadeV);
+
+    Particle::capacidadeV = this->capacidadeV;
+    Particle::cidades = this->cidades;
 }
 
 void 
@@ -133,13 +137,13 @@ PSO::executar(string routes_file){
 vector<int> 
 PSO::get_solution(Particle &p)
 {
-    return p.get_full_solution(cidades, capacidadeV);
+    return p.get_full_solution();
 }
 
 void 
 PSO::apresentar(Particle &p){
 
-    for(auto &c : p.get_full_solution(cidades, capacidadeV)){
+    for(auto &c : p.get_full_solution()){
 
         cout << c << " ";
     }
@@ -211,8 +215,8 @@ PSO::gerar_particulas_setorizadas(){
         indices[i] = i+1;
     }
     
-    int p_sel = util::numero_aleatorio(nCidades-1);
-    
+    int p_sel = 16 ;// util::numero_aleatorio(nCidades-1);
+    // cout << "sel: " << p_sel << endl;
     auto calcularDistanciaQuadrada = [&](int id) {
         double dx = cidades[id].x - cidades[p_sel].x;
         double dy = cidades[id].y - cidades[p_sel].y;
@@ -309,11 +313,21 @@ PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
         // Aplica a heurística de melhoria
 
         if(tam_elite != 0){
-            for(auto & e : elite)
+            for(auto & e : elite) {
                 localSearch->melhoria_2_opt(*e);
-            
+                if(seguir_melhor > 0 && i % seguir_melhor == 0)
+                    util::guarda_solucao(solucoes[0], i, elite[0]->dist_atual, get_solution(*elite[0]));
+
+                localSearch->swap_star(*e);
+
+                if(seguir_melhor > 0 && i % seguir_melhor == 0)
+                    util::guarda_solucao(solucoes[0], i, elite[0]->dist_atual, get_solution(*elite[0]));
+                localSearch->melhoria_2_opt(*e);
+            }
+
             if(seguir_melhor > 0 && i % seguir_melhor == 0)
                 util::guarda_solucao(solucoes[0], i, elite[0]->dist_atual, get_solution(*elite[0]));
+        return;
         }
         
         make_heap(elite.begin(), elite.end(), min_particle_cmp);
@@ -324,7 +338,9 @@ PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
         }
         
         g_best = elite[0];
-        
+
+        cout << "loopando\n";
+
         for(Particle& p: particulas){
             
             Particle p_best(p.p_best);
@@ -333,11 +349,11 @@ PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
             double r2 = static_cast<double>(rand()) / RAND_MAX;
             
             double w = w_max - (w_max - w_min)/nRep * i;
-
+            cout << "antes calcular\n";
             p.velocity = p.velocity * w + (p_best - p) * c1 * r1  + (*g_best - p) * c2 * r2;
-            
+            cout << "antes aplicar\n";
             p.aplicar_velocidade(p.velocity);
-
+            cout << "loopando\n";
         }
         
     }
