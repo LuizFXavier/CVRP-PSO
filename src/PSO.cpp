@@ -209,6 +209,7 @@ PSO::melhor_r(vector<int> &rota, int begin){
 
 void
 PSO::gerar_particulas_setorizadas(){
+    
     vector<int> indices(nCidades-1);
     
     for(int i = 0; i < nCidades-1; i++){
@@ -310,19 +311,11 @@ PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
         if(seguir_melhor > 0 && i % seguir_melhor == 0){
             util::guarda_solucao(solucoes[0], i, elite[0]->dist_atual, get_solution(*elite[0]));
         }
-        // Aplica a heurística de melhoria
+        // Aplica as heurísticas de busca local
 
         if(tam_elite != 0){
             for(auto & e : elite) {
-                localSearch->melhoria_2_opt(*e);
-                if(seguir_melhor > 0 && i % seguir_melhor == 0)
-                    util::guarda_solucao(solucoes[0], i, elite[0]->dist_atual, get_solution(*elite[0]));
-
-                localSearch->swap_star(*e);
-
-                if(seguir_melhor > 0 && i % seguir_melhor == 0)
-                    util::guarda_solucao(solucoes[0], i, elite[0]->dist_atual, get_solution(*elite[0]));
-                localSearch->melhoria_2_opt(*e);
+                this->localSearch->search(*e);
             }
 
             if(seguir_melhor > 0 && i % seguir_melhor == 0)

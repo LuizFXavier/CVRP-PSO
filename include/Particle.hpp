@@ -30,6 +30,10 @@ public:
 
     double fitness(vector<Cidade> &cidades, int capacidade);
 
+    vector<Route> get_routes();
+
+    void update_tour(vector<Route>& r);
+
 
     void atualiza_dist(vector<Cidade> &cidades, int capacidade) {
         this->dist_atual = fitness(cidades, capacidade);

@@ -13,3 +13,14 @@ public:
     static auto distancia(Cidade &a, Cidade &b){return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2));};
     static auto distancia(std::vector<Cidade> &v, int &a, int &b){return Cidade::distancia(v[a], v[b]);};
 };
+
+struct Route{
+
+    unsigned demanda{};
+    double custo{};
+    std::vector<int> path = {0};
+    
+    auto& operator[](size_t i){return path[i];}
+
+    auto size() const {return path.size();}
+};

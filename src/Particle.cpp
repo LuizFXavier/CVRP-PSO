@@ -1,6 +1,7 @@
 #include <utility>
 #include <iostream>
 #include <unordered_map>
+#include <algorithm>
 #include "Particle.hpp"
 
 int Particle::capacidadeV = 0;
@@ -136,4 +137,49 @@ Particle::fitness(vector<Cidade> &cidades, int capacidade) {
 
     }
     return distancia;
+}
+
+vector<Route> 
+Particle::get_routes()
+{
+    vector<Route> rotas{};
+    int nRotas{};
+
+    auto capcAtual = capacidadeV;
+
+    // Rotas sempre começam com 0
+    rotas.push_back(Route());
+
+    for(int i = 0; i < cidades.size(); i++){
+
+        if(cidades[this->solucao_atual[i+1]].demanda > capcAtual){
+    
+            rotas[nRotas].path.push_back(0); // Finaliza a rota
+            rotas.push_back(Route());        // Inicia uma rota nova
+            ++nRotas;                        // Incrementa o contador de rotas
+            capcAtual = capacidadeV;         // Reseta a capacidade disponível
+        }
+
+        capcAtual -= cidades[this->solucao_atual[i+1]].demanda;
+
+        rotas[nRotas].path.push_back(this->solucao_atual[i+1]);
+        rotas[nRotas].custo += Cidade::distancia(cidades, solucao_atual[i], solucao_atual[i+1]);
+        rotas[nRotas].demanda += cidades[solucao_atual[i+1]].demanda;
+
+    }
+
+    return rotas;
+}
+
+void 
+Particle::update_tour(vector<Route> &r)
+{
+    int i = 1;
+    double custo = 0;
+    for(auto rota : r){
+        std::copy(rota.path.begin()+1, rota.path.end()-1, solucao_atual.begin() + i);
+        i += rota.path.size() - 2;
+        custo += rota.custo;
+    }
+    atualiza_dist(custo);
 }

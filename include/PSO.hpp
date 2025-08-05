@@ -14,9 +14,10 @@ class PSO
 {
 private:
     void main_loop(std::vector<std::vector<Solucao>> &solucoes);
-    void gerar_particulas();
+    
     void gerar_particulas_aleatorias();
     void gerar_particulas_setorizadas();
+    void gerar_particulas();
 
     Particle best_particle;
     double best_dist = INFINITO;
@@ -42,7 +43,7 @@ private:
     int seguir_melhor = 0; //Frequência em que o resultado da melhor partícula é guardado
     int seguir_qualquer = 0; //Frequência em que os resultados de partículas quaisquer são guardados
 
-    int tam_elite = 0;
+    int tam_elite = 1;
 
     void executar(string routes_file);
 
@@ -77,6 +78,7 @@ private:
     void apresentar(Particle &p);
 
     Particle& get_best(){return this->best_particle;};
+
 };
 
 void inline

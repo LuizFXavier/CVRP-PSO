@@ -5,7 +5,27 @@
 #include "util.hpp"
 using namespace std;
 
+void teste_troca(){
+    Particle p(vector<int>{0,1,2,3,4,5,6,7,0});
+
+    vector<Route> rotas{};
+
+    rotas.push_back(Route());
+    rotas.push_back(Route());
+
+    rotas[0].path = vector<int>{0,9,9,9,9,0};
+    rotas[1].path = vector<int>{0,8,8,8,0};
+
+    p.update_tour(rotas);
+
+    for(int i : p.solucao_atual)
+        cout << i << ", ";
+    cout << endl;
+}
+
 int main(int argc, char * argv[]){
+
+    // teste_troca();
 
     PSO pso;
     
