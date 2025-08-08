@@ -24,7 +24,7 @@ util::salva_solucoes
 
     std::string part = qual < 0 ? "_best" : std::string("_") + std::to_string(qual);
 
-    std::string nome_arquivo = "/mnt/c/Projetos/LSCAD/CVRP-PSO/resultado/";
+    std::string nome_arquivo = "/mnt/c/Projetos/CVRP-PSO/resultado/";
     nome_arquivo += instance_name;
     nome_arquivo += part;
     nome_arquivo += std::string("_nPart-") + to_string(nPart);

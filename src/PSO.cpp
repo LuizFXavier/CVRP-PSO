@@ -216,7 +216,7 @@ PSO::gerar_particulas_setorizadas(){
         indices[i] = i+1;
     }
     
-    int p_sel = 16 ;// util::numero_aleatorio(nCidades-1);
+    int p_sel = util::numero_aleatorio(nCidades-1);
     // cout << "sel: " << p_sel << endl;
     auto calcularDistanciaQuadrada = [&](int id) {
         double dx = cidades[id].x - cidades[p_sel].x;
@@ -320,7 +320,7 @@ PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
 
             if(seguir_melhor > 0 && i % seguir_melhor == 0)
                 util::guarda_solucao(solucoes[0], i, elite[0]->dist_atual, get_solution(*elite[0]));
-        return;
+
         }
         
         make_heap(elite.begin(), elite.end(), min_particle_cmp);
@@ -332,8 +332,6 @@ PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
         
         g_best = elite[0];
 
-        cout << "loopando\n";
-
         for(Particle& p: particulas){
             
             Particle p_best(p.p_best);
@@ -342,11 +340,11 @@ PSO::main_loop(std::vector<std::vector<Solucao>> &solucoes){
             double r2 = static_cast<double>(rand()) / RAND_MAX;
             
             double w = w_max - (w_max - w_min)/nRep * i;
-            cout << "antes calcular\n";
+
             p.velocity = p.velocity * w + (p_best - p) * c1 * r1  + (*g_best - p) * c2 * r2;
-            cout << "antes aplicar\n";
+
             p.aplicar_velocidade(p.velocity);
-            cout << "loopando\n";
+
         }
         
     }

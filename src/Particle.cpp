@@ -23,10 +23,10 @@ Velocity Particle::operator-(Particle &p1)
     
     for(int i = 0; i < p1.solucao_atual.size(); i++){
         int t = this->solucao_atual[i];
-        cout << "antes while\n";
+
         int a = 0;
         while(t != caminho_aux[i]){
-            cout << "loopando no while - " << ++a << "\n";
+
             int k = positions[caminho_aux[i]];
             v.value.push_back(pair(i, k));
             int temp = caminho_aux[i];
@@ -139,7 +139,7 @@ Particle::fitness(vector<Cidade> &cidades, int capacidade) {
     return distancia;
 }
 
-vector<Route> 
+vector<Route>
 Particle::get_routes()
 {
     vector<Route> rotas{};
@@ -150,22 +150,49 @@ Particle::get_routes()
     // Rotas sempre começam com 0
     rotas.push_back(Route());
 
-    for(int i = 0; i < cidades.size(); i++){
+    for(int i = 0; i < solucao_atual.size() - 1; i++){
 
-        if(cidades[this->solucao_atual[i+1]].demanda > capcAtual){
-    
-            rotas[nRotas].path.push_back(0); // Finaliza a rota
-            rotas.push_back(Route());        // Inicia uma rota nova
-            ++nRotas;                        // Incrementa o contador de rotas
-            capcAtual = capacidadeV;         // Reseta a capacidade disponível
+        // if(cidades[this->solucao_atual[i+1]].demanda > capcAtual){
+        //
+        //     // Considera volta ao depósito
+        //     rotas[nRotas].custo +=Cidade::distancia(cidades, solucao_atual[i], 0);
+        //
+        //     rotas[nRotas].path.push_back(0); // Finaliza a rota
+        //     rotas.push_back(Route());        // Inicia uma rota nova
+        //     ++nRotas;                          // Incrementa o contador de rotas
+        //     capcAtual = capacidadeV;           // Reseta a capacidade disponível
+        // }
+        //
+        // capcAtual -= cidades[this->solucao_atual[i+1]].demanda;
+        //
+        // rotas[nRotas].path.push_back(this->solucao_atual[i+1]);
+        // rotas[nRotas].custo += Cidade::distancia(cidades, solucao_atual[i], solucao_atual[i+1]);
+        // rotas[nRotas].demanda += cidades[solucao_atual[i+1]].demanda;
+
+
+        if (cidades[this->solucao_atual[i+1]].demanda < capcAtual)
+        {
+            capcAtual -= cidades[this->solucao_atual[i+1]].demanda;
+            rotas[nRotas].path.push_back(this->solucao_atual[i+1]);
+            rotas[nRotas].custo += Cidade::distancia(cidades, solucao_atual[i], solucao_atual[i+1]);
+            rotas[nRotas].demanda += cidades[solucao_atual[i+1]].demanda;
         }
+        else
+        {
+            // Encerramento da rota
+            capcAtual = capacidadeV;
+            rotas[nRotas].path.push_back(0);
+            rotas[nRotas].custo += Cidade::distancia(cidades, solucao_atual[i], 0);
 
-        capcAtual -= cidades[this->solucao_atual[i+1]].demanda;
+            // Incialização da próxima rota
+            rotas.push_back(Route());
+            ++nRotas;
 
-        rotas[nRotas].path.push_back(this->solucao_atual[i+1]);
-        rotas[nRotas].custo += Cidade::distancia(cidades, solucao_atual[i], solucao_atual[i+1]);
-        rotas[nRotas].demanda += cidades[solucao_atual[i+1]].demanda;
-
+            capcAtual -= cidades[this->solucao_atual[i+1]].demanda;
+            rotas[nRotas].path.push_back(this->solucao_atual[i+1]);
+            rotas[nRotas].custo += Cidade::distancia(cidades, 0, solucao_atual[i+1]);
+            rotas[nRotas].demanda += cidades[solucao_atual[i+1]].demanda;
+        }
     }
 
     return rotas;
@@ -180,6 +207,10 @@ Particle::update_tour(vector<Route> &r)
         std::copy(rota.path.begin()+1, rota.path.end()-1, solucao_atual.begin() + i);
         i += rota.path.size() - 2;
         custo += rota.custo;
+    }
+    if (custo < 0)
+    {
+        cout << "Soos\n";
     }
     atualiza_dist(custo);
 }

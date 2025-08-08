@@ -11,7 +11,7 @@ public:
     bool greater(Cidade* outra, bool cmpX){return cmpX ? this->x > outra->x : this->y > outra->y;};
 
     static auto distancia(Cidade &a, Cidade &b){return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2));};
-    static auto distancia(std::vector<Cidade> &v, int &a, int &b){return Cidade::distancia(v[a], v[b]);};
+    static auto distancia(std::vector<Cidade> &v, int a, int b){return Cidade::distancia(v[a], v[b]);};
 };
 
 struct Route{

@@ -39,6 +39,21 @@ private:
                Cidade::distancia(cidades[v], cidades[s]) -
                Cidade::distancia(cidades[p], cidades[s]);
     }
+
+    double insertion_cost(unsigned v, unsigned p, unsigned s, double cost)
+    {
+        auto b = insertion_cost(v,p,s);
+        auto a = cost - b;
+        if (a < 0)
+        {
+            auto w = Cidade::distancia(cidades[p], cidades[v]);
+            auto x = Cidade::distancia(cidades[v], cidades[s]);
+            auto y = Cidade::distancia(cidades[p], cidades[s]);
+            auto t = w + x - y;
+        }
+
+        return a;
+    }
     double insertion_cost(vector<int>& sol, unsigned id_v, unsigned id_p, unsigned id_s) {
 
         return insertion_cost(sol[id_v], sol[id_p], sol[id_s]);
@@ -50,7 +65,14 @@ private:
 
     // Custos de inserção de um cliente v em uma rota r'
     vector<insert_info> findTop3Locations(unsigned v, Route& r_ln);
-    
+
+    double route_cost(Route &r)
+    {
+        double c = 0;
+        for (int i = 0; i < r.size() -1; i++)
+            c += Cidade::distancia(cidades[r[i]], cidades[r[i+1]]);
+        return c;
+    }
 
     void apply_swap(Particle& p, vector<int>& sol, double cost, int des_v, int des_u, insert_info_legacy &v, insert_info_legacy &u);
     vector<Cidade>& cidades;
