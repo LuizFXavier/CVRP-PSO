@@ -8,7 +8,7 @@ from sys import argv
 from time import time
 from leitor_instancia import ler_instancia
 
-NUM_TESTES = 10
+NUM_TESTES = 5
 instance = ""
 
 arquivos_teste = []
@@ -52,10 +52,9 @@ dados = [["Mínimo:"],
 
 valores = []
 
-nParticulas = [25 for i in range(4)]
-nRepeticoes = [5000 for i in range(4)]
-nElite = [5, 5, 5, 5]
-setorizado = [5, 10, 15, 20]
+nParticulas = [25]
+nRepeticoes = [1000]
+nElite = [5]
 
 count = 1
 
@@ -86,8 +85,7 @@ for caso_teste in arquivos_teste:
                             "10",
                             "-elite",
                             str(nElite[c]),
-                            "-setorizar",
-                            str(setorizado[c])
+                            "-setorizar"
                             ]
                             ).decode()
             print(i)
@@ -104,13 +102,12 @@ for caso_teste in arquivos_teste:
 
         valores = []
 
-    ws.append([instancia["NAME"], instancia["COMMENT"]])
+    ws.append([instancia["NAME"]])
     ws.append([])
 
     ws.append(["Partículas:"] + nParticulas)
     ws.append(["Repetições:"] + nRepeticoes)
     ws.append(["Elite"] + nElite)
-    ws.append(["Setorizar"] + setorizado)
     ws.append([])
 
     #Colocar na tabela e resetar dados para partir para a próxima entrada
