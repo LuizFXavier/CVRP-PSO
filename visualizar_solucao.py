@@ -35,7 +35,7 @@ alvo = int(argv[3]) - 1
 
 linha_alvo = linhas[alvo]
 
-iteracao, custo, rota = linha_alvo.split(';')
+iteracao, custo, rota = linha_alvo.split(',')
 
 print("custo:" ,custo)
 
