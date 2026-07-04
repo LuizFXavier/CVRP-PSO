@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 4.0)
 
-project(cvrp-pso VERSION 0.0.1 LANGUAGES CXX)
+project(cvrp-pso VERSION 1.9.0 LANGUAGES CXX)
 
 include(CTest)
 
@@ -10,4 +10,5 @@ add_subdirectory(libcvrp-core)
 add_subdirectory(libcvrp-engine)
 
 add_subdirectory(libpso-core)
+add_subdirectory(libpso-engine)
 add_subdirectory(app)
