@@ -9,6 +9,7 @@ target_sources(libcvrp-engine
   PRIVATE
   libcvrp/engine/io.cpp
   libcvrp/engine/splitter.cpp
+  libcvrp/engine/local-search.cpp
 )
 
 target_link_libraries(libcvrp-engine
