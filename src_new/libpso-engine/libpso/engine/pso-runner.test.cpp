@@ -57,6 +57,7 @@ test_trivial_instance()
   hp.w_min = 0.4;
   hp.cognitive_c = 1.0;
   hp.social_c = 1.0;
+  hp.elite_size = 2;
 
   pso::Particle best;
   try
@@ -94,6 +95,7 @@ test_reproducible() {
   pso::Hyperparameters hp;
   hp.swarm_size = 10;
   hp.iterations = 5;
+  hp.elite_size = 2;
 
   // Primeira execução
   srand(42); 
