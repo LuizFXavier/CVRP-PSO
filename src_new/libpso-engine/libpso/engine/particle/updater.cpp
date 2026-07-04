@@ -107,7 +107,9 @@ apply_velocity(Particle &p, Velocity& v)
   }
 }
 
-float fitness(Particle& p, cvrp::Instance& instance){
+float 
+fitness(Particle& p, cvrp::Instance& instance)
+{
 
   float distance = 0;
   int curr_capacity = instance.capacity;
