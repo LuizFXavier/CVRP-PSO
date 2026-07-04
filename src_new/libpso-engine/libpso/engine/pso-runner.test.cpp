@@ -2,9 +2,12 @@
 #include <cstdlib>
 
 #include <libpso/engine/pso-runner.hpp>
+
 #include <libcvrp/core/Instance.hpp>
 
 using namespace std;
+
+cvrp::Instance create_simple_instance();
 
 bool test_trivial_instance();
 bool test_zero_iterations();
