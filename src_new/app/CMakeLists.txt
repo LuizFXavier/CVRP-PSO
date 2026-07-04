@@ -6,7 +6,8 @@ if(BUILD_TESTING)
         
         # Gera um nome seguro para o alvo (ex: command_line_test_cpp)
         get_filename_component(BASE_NAME ${TEST_SRC} NAME)
-        string(REPLACE "." "_" TEST_TARGET_NAME ${BASE_NAME}) 
+        string(REPLACE "." "_" TEST_TARGET_NAME ${BASE_NAME})
+        set(TEST_TARGET_NAME "app-${TEST_TARGET_NAME}")
         
         add_executable(${TEST_TARGET_NAME} 
             ${TEST_SRC}
@@ -16,7 +17,7 @@ if(BUILD_TESTING)
         target_include_directories(${TEST_TARGET_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
         target_link_libraries(${TEST_TARGET_NAME} PRIVATE 
-            libpso_core
+            libpso-core
         )
 
         # Registra o teste no CTest
