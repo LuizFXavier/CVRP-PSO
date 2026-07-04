@@ -1,4 +1,4 @@
-// TODO: capacity, clients
+#pragma once
 #include <string>
 #include <vector>
 
@@ -13,7 +13,9 @@ struct Instance
   unsigned int dimension{};
   unsigned int capacity{};
   
-  std::vector<cvrp::Client> clients;
+  std::vector<cvrp::Client> clients{};
+
+  std::vector<std::vector<float>> distance_matrix{{}};
 };
 
 } // namespace cvrp

@@ -1,24 +1,24 @@
 #pragma once
 
 #include <vector>
-#include  <cmath>
+#include <cmath>
 
 namespace cvrp
 {
 
 struct Client
 {
-    float x{};
-    float y{};
-    unsigned int demand{};
+  float x{};
+  float y{};
+  unsigned int demand{};
 };
 
-inline double 
+inline float 
 distance(const Client& a, const Client& b)
 {
-    double dx = a.x - b.x;
-    double dy = a.y - b.y;
-    return std::sqrt(dx * dx + dy * dy);
+  float dx = a.x - b.x;
+  float dy = a.y - b.y;
+  return std::sqrt(dx * dx + dy * dy);
 }
     
 } // namespace cvrp
