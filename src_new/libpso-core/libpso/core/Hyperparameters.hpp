@@ -10,7 +10,7 @@ namespace pso
     double w_max = 1; //Coeficiente de inércia máximo
     int iterations = 0;  //Número de iterações a serem performadas
     int swarm_size = 0; // Number of particles in the swarm
-    int elite_size = 0; // Número de partículas do enxame que passarão pelos mecanismos de busca local
+    int elite_size = -1; // Número de partículas do enxame que passarão pelos mecanismos de busca local
   };
   
 } // namespace pso
