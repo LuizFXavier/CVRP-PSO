@@ -88,7 +88,7 @@ parse_cli(int argc, char* argv[])
         if(i+1 > argc)
           throw std::runtime_error("");
 
-        pso.elite = std::stoi(argv[i+1]);  
+        pso.elite_size = std::stoi(argv[i+1]);  
       }
       catch(const std::exception& e){
         throw std::runtime_error(std::format("Error: {} option requires an integer value.", arg));
