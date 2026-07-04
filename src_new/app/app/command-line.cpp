@@ -82,6 +82,21 @@ parse_cli(int argc, char* argv[])
       ++i;
     }
 
+    else if(valid_argument("--elite", i)){
+
+      try{
+        if(i+1 > argc)
+          throw std::runtime_error("");
+
+        pso.elite = std::stoi(argv[i+1]);  
+      }
+      catch(const std::exception& e){
+        throw std::runtime_error(std::format("Error: {} option requires an integer value.", arg));
+      }
+
+      ++i;
+    }
+
   }
 
   if(config.input_dir.empty())
