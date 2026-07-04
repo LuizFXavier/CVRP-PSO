@@ -6,9 +6,9 @@
 
 namespace cvrp::local_search
 {
+  void optimize(std::vector<int>& mega_tour, Instance& instance);
+  
   void apply_two_opt(std::vector<Route>& routes, Instance& instance);
   void apply_swap_star(std::vector<Route>& routes, Instance& instance);
-
-  void optimize(std::vector<int>& mega_tour, Instance& instance);
 
 } // namespace cvrp::local_search
