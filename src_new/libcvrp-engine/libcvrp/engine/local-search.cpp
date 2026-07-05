@@ -18,6 +18,17 @@ optimize(std::vector<int>& mega_tour, Instance& instance)
   apply_two_opt(routes, instance);
 
   apply_swap_star(routes, instance);
+
+  int tour_index = 1;
+
+  for (int r = 0; r < routes.size(); ++r){
+    for (int j = 1; j < routes[r].size() - 1; ++j){
+
+      mega_tour[tour_index] = routes[r].path[j];
+
+      ++tour_index;
+    }
+  }
 }
 
 void 
