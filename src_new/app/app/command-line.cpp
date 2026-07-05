@@ -11,7 +11,7 @@ namespace app
 {
 
 Parameters
-parse_cli(int argc, char* argv[])
+parse_cli(int argc, const char* argv[])
 {
   auto valid_argument = [&](const char* b, int i){
     return std::strcmp(argv[i], b) == 0;
@@ -38,9 +38,9 @@ parse_cli(int argc, char* argv[])
     if (valid_argument("--in", i) || valid_argument("--input", i)){
 
       if(i+1 > argc)
-          throw std::runtime_error(std::format("Error: {} option requires a directory path.", arg));
+          throw std::runtime_error(std::format("Error: {} option requires a path to a CVRP instance.", arg));
 
-      config.input_dir = argv[i+1];
+      config.instance_path = argv[i+1];
       ++i;
     }
 
@@ -99,7 +99,7 @@ parse_cli(int argc, char* argv[])
 
   }
 
-  if(config.input_dir.empty())
+  if(config.instance_path.empty())
     throw std::runtime_error("Error: Missing --input option.");
 
   if(config.output_dir.empty())

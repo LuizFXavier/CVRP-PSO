@@ -6,7 +6,7 @@
 namespace app
 {
   struct ConfigIO{
-    std::string input_dir;
+    std::string instance_path;
     std::string output_dir;
     bool showHelp;
   };
@@ -16,6 +16,6 @@ namespace app
     pso::Hyperparameters pso;
   };
 
-  Parameters parse_cli(int argc, char* argv[]);
+  Parameters parse_cli(int argc, const char* argv[]);
     
 } // namespace app

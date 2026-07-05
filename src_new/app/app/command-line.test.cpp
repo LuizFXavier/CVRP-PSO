@@ -56,14 +56,14 @@ int main(){
 bool
 simple_success(){
   vector<const char*> argv = {"test", 
-                              "--input", "in_dir", 
+                              "--input", "in_path", 
                               "--output", "out_dir", 
                               "--iter", "20",
                               "--swarm", "20"};
 
-  auto [config, pso] = app::parse_cli(argv.size(), (char**)argv.data());
+  auto [config, pso] = app::parse_cli(argv.size(), argv.data());
   
-  return config.input_dir == "in_dir" && config.output_dir == "out_dir" &&
+  return config.instance_path == "in_path" && config.output_dir == "out_dir" &&
          pso.swarm_size == 20 && pso.iterations == 20;
 }
 
@@ -72,7 +72,7 @@ bool
 help_detected(){
   vector<const char*> argv = {"test", "--help"};
 
-  auto [config, _] = app::parse_cli(argv.size(), (char**)argv.data());
+  auto [config, _] = app::parse_cli(argv.size(), argv.data());
   
   return config.showHelp;
 }
@@ -83,7 +83,7 @@ missing_input(){
   vector<const char*> argv = {"test", "--output", "out_dir"};
 
   try {
-    auto parameters = app::parse_cli(argv.size(), (char**)argv.data());
+    auto parameters = app::parse_cli(argv.size(), argv.data());
   } catch (const std::exception& e) {
     return true;
   }
@@ -96,7 +96,7 @@ missing_output(){
   vector<const char*> argv = {"test", "--input", "in_dir"};
   
   try {
-    auto parameters = app::parse_cli(argv.size(), (char**)argv.data());
+    auto parameters = app::parse_cli(argv.size(), argv.data());
   } catch (const std::exception& e) {
     return true;
   }
@@ -109,7 +109,7 @@ missing_input_value(){
   vector<const char*> argv = {"test", "--in"};
   
   try {
-    auto parameters = app::parse_cli(argv.size(), (char**)argv.data());
+    auto parameters = app::parse_cli(argv.size(), argv.data());
   } catch (const std::exception& e) {
     return true;
   }
@@ -122,7 +122,7 @@ missing_output_value(){
   vector<const char*> argv = {"test", "--out"};
   
   try {
-    auto parameters = app::parse_cli(argv.size(), (char**)argv.data());
+    auto parameters = app::parse_cli(argv.size(), argv.data());
   } catch (const std::exception& e) {
     return true;
   }
@@ -135,7 +135,7 @@ missing_iterations_value(){
   vector<const char*> argv = {"test", "--iter"};
   
   try {
-    auto parameters = app::parse_cli(argv.size(), (char**)argv.data());
+    auto parameters = app::parse_cli(argv.size(), argv.data());
   } catch (const std::exception& e) {
     return true;
   }
@@ -148,7 +148,7 @@ missing_swarm_size_value(){
   vector<const char*> argv = {"test", "--swarm-size"};
   
   try {
-    auto parameters = app::parse_cli(argv.size(), (char**)argv.data());
+    auto parameters = app::parse_cli(argv.size(), argv.data());
   } catch (const std::exception& e) {
     return true;
   }
@@ -161,7 +161,7 @@ invalid_iterations_value(){
   vector<const char*> argv = {"test", "--iter", "-2"};
   
   try {
-    auto parameters = app::parse_cli(argv.size(), (char**)argv.data());
+    auto parameters = app::parse_cli(argv.size(), argv.data());
   } catch (const std::exception& e) {
     return true;
   }
@@ -174,7 +174,7 @@ invalid_swarm_size_value(){
   vector<const char*> argv = {"test", "--swarm-size", "0"};
   
   try {
-    auto parameters = app::parse_cli(argv.size(), (char**)argv.data());
+    auto parameters = app::parse_cli(argv.size(), argv.data());
   } catch (const std::exception& e) {
     return true;
   }
