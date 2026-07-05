@@ -1,3 +1,19 @@
+add_executable(cvrp-pso)
+
+target_sources(cvrp-pso
+  PRIVATE
+  app/command-line.cpp 
+  app/main.cpp
+)
+
+target_include_directories(cvrp-pso PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+
+target_link_libraries(cvrp-pso
+  PUBLIC
+  libcvrp-engine
+  libpso-engine
+)
+
 if(BUILD_TESTING)
     # Procura todos os ficheiros de teste na pasta
     file(GLOB TEST_SOURCES "app/*.test.cpp")
