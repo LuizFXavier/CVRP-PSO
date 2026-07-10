@@ -57,7 +57,7 @@ test_two_opt()
 void 
 test_swap_star(){
   cvrp::Instance inst;
-  inst.dimension = 4; // 1 Depósito e 3 Clientes
+  inst.dimension = 6; // 1 Depósito e 5 Clientes
   inst.capacity = 10;
   
   // Depósito A na origem (0,0)
