@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <vector>
+#include <omp.h>
 
 #include <libcvrp/engine/local-search.hpp>
 
