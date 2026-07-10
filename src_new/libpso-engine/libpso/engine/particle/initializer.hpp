@@ -8,5 +8,5 @@ namespace pso
 {
   Particle random_initialize(int dimension, std::mt19937& gen);
   
-  Particle sector_initialize(cvrp::Instance& instance);
+  Particle sector_initialize(cvrp::Instance& instance, std::mt19937& gen);
 } // namespace pso
