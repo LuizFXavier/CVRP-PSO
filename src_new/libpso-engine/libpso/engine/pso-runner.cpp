@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <format>
 #include <algorithm>
+#include <omp.h>
 
 #include <libpso/engine/pso-runner.hpp>
 
@@ -89,6 +90,7 @@ run_pso(cvrp::Instance &instance, Hyperparameters hyperparameters)
     }
 
     // Execução dos mecanismos de busca local nas partículas pertencentes à elite
+    #pragma omp parallel for
     for (auto& e : elite){
       cvrp::local_search::optimize(e->curr_solution, instance);
 
