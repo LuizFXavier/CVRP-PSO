@@ -1,8 +1,13 @@
 #include <fstream>
 #include <string>
 #include <regex>
+#include <filesystem>
 
 #include <libcvrp/engine/io.hpp>
+
+#include <libcvrp/core/Instance.hpp>
+#include <libcvrp/engine/splitter.hpp>
+
 
 namespace cvrp::io
 {
@@ -87,5 +92,37 @@ read_instance(std::string instance_path)
     
 }
 
+void 
+save_routes(std::vector<int>& mega_tour, cvrp::Instance& instance, std::string output_path, std::string file_name)
+{
+  auto routes = naive_split(mega_tour, instance);
+
+  std::filesystem::path full_file_path = output_path;
+
+  full_file_path = full_file_path / file_name;
+
+  std::ofstream out_file(full_file_path);
+
+  float total_cost = 0;
+
+  for (int r = 0; r < routes.size(); ++r){
+    
+    out_file << "Route #" << r + 1 << ":";
+
+    total_cost += routes[r].cost;
+
+    for (int i = 1; i < routes[r].size() - 1; ++i){
+
+      out_file << " " << routes[r].path[i];
+
+    }
+
+    out_file << "\n";
+  }
+
+  out_file << "Cost " << total_cost;
+
+  out_file.close();
+}
 
 } // namespace cvrp::io

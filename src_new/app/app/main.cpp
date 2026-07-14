@@ -1,8 +1,7 @@
-//TODO: Executável de fato, que lê da linha de comando e passa a instância para o PSO
-
 //TODO: Help
 
 #include <iostream>
+#include <string>
 
 #include <app/command-line.hpp>
 #include <libcvrp/engine/io.hpp>
@@ -18,6 +17,10 @@ main(int argc, const char *argv[])
   auto best_particle = pso::run_pso(instance, hyperparameters);
 
   std::cout << best_particle.curr_of << "\n";
+
+  std::string file_name = instance.name + std::string(".sol");
+
+  cvrp::io::save_routes(best_particle.curr_solution, instance, configIO.output_dir, file_name);
 
   return 0;
 }
