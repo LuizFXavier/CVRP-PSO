@@ -2,6 +2,7 @@
 #include <string>
 #include <cstring>
 #include <format>
+#include <iostream>
 
 #include <app/command-line.hpp>
 
@@ -37,15 +38,15 @@ parse_cli(int argc, const char* argv[])
 
     if (valid_argument("--in", i) || valid_argument("--input", i)){
 
-      if(i+1 > argc)
-          throw std::runtime_error(std::format("Error: {} option requires a path to a CVRP instance.", arg));
-
+      if(i+1 >= argc)
+        throw std::runtime_error(std::format("Error: {} option requires a path to a CVRP instance.", arg));
+      
       config.instance_path = argv[i+1];
       ++i;
     }
 
     else if(valid_argument("--out", i) || valid_argument("--output", i)){
-      if(i+1 > argc)
+      if(i+1 >= argc)
           throw std::runtime_error(std::format("Error: {} option requires a directory path.", arg));
 
       config.output_dir = argv[i+1];
@@ -55,7 +56,7 @@ parse_cli(int argc, const char* argv[])
     else if(valid_argument("--swarm-size", i) || valid_argument("--swarm", i)){
 
       try{
-        if(i+1 > argc)
+        if(i+1 >= argc)
           throw std::runtime_error("");
 
         pso.swarm_size = std::stoi(argv[i+1]);  
@@ -70,7 +71,7 @@ parse_cli(int argc, const char* argv[])
     else if(valid_argument("--iterations", i) || valid_argument("--iter", i)){
 
       try{
-        if(i+1 > argc)
+        if(i+1 >= argc)
           throw std::runtime_error("");
 
         pso.iterations = std::stoi(argv[i+1]);  
@@ -85,7 +86,7 @@ parse_cli(int argc, const char* argv[])
     else if(valid_argument("--elite", i)){
 
       try{
-        if(i+1 > argc)
+        if(i+1 >= argc)
           throw std::runtime_error("");
 
         pso.elite_size = std::stoi(argv[i+1]);  
