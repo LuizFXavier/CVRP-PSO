@@ -19,6 +19,12 @@ target_link_libraries(libpso-engine
   libpso-core
 )
 
+find_package(OpenMP REQUIRED)
+target_link_libraries(libpso-engine
+  PUBLIC
+  OpenMP::OpenMP_CXX
+)
+
 if(BUILD_TESTING)
   # Procura todos os arquivos de teste na pasta
   file(GLOB_RECURSE TEST_SOURCES CONFIGURE_DEPENDS "libpso/engine/*.test.cpp")
