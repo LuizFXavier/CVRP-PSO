@@ -23,7 +23,7 @@ naive_split(std::vector<int> &mega_tour, Instance& instance)
 
   for(int i = 0; i < mega_tour.size() - 1; i++){
 
-    if (clients[mega_tour[i+1]].demand < curr_capacity){
+    if (clients[mega_tour[i+1]].demand <= curr_capacity){
 
       curr_capacity -= clients[mega_tour[i+1]].demand;
       routes[n_routes].path.push_back(mega_tour[i+1]);
@@ -37,7 +37,7 @@ naive_split(std::vector<int> &mega_tour, Instance& instance)
 
       // Retorno ao depósito
       routes[n_routes].path.push_back(0);
-      routes[n_routes].cost += distance(clients[mega_tour[i]], clients[mega_tour[0]]);
+      routes[n_routes].cost += distance(clients[mega_tour[i]], clients[0]);
 
       // Incialização da próxima rota
       routes.push_back(Route());
@@ -47,7 +47,7 @@ naive_split(std::vector<int> &mega_tour, Instance& instance)
 
       curr_capacity -= clients[mega_tour[i+1]].demand;
       routes[n_routes].path.push_back(mega_tour[i+1]);
-      routes[n_routes].cost += distance(clients[mega_tour[0]], clients[mega_tour[i+1]]);
+      routes[n_routes].cost += distance(clients[0], clients[mega_tour[i+1]]);
       routes[n_routes].total_demand += clients[mega_tour[i+1]].demand;
     }
   }
