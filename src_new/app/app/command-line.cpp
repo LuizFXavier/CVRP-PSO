@@ -2,7 +2,6 @@
 #include <string>
 #include <cstring>
 #include <format>
-#include <iostream>
 
 #include <app/command-line.hpp>
 
@@ -90,6 +89,21 @@ parse_cli(int argc, const char* argv[])
           throw std::runtime_error("");
 
         pso.elite_size = std::stoi(argv[i+1]);  
+      }
+      catch(const std::exception& e){
+        throw std::runtime_error(std::format("Error: {} option requires an integer value.", arg));
+      }
+
+      ++i;
+    }
+
+    else if(valid_argument("--sector", i)){
+
+      try{
+        if(i+1 >= argc)
+          throw std::runtime_error("");
+
+        pso.sectorized = std::stoi(argv[i+1]);  
       }
       catch(const std::exception& e){
         throw std::runtime_error(std::format("Error: {} option requires an integer value.", arg));

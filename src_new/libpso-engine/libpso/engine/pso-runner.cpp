@@ -36,10 +36,24 @@ run_pso(cvrp::Instance &instance, Hyperparameters hyperparameters)
   std::random_device rd;
   std::mt19937 gen(rd());
 
-  // Inicialização das partículas
-  for (int i = 0; i < hyperparameters.swarm_size; ++i){
+  // Inicialização das partícula
+  {
+    int sectorized_particles = std::min(hyperparameters.swarm_size, hyperparameters.sectorized);
 
-    particles.push_back(random_initialize(instance.dimension, gen));
+    sectorized_particles = std::max(sectorized_particles, 0);
+
+    // Inicialização setorizada
+    for (int i = 0; i < sectorized_particles; ++i){
+
+      particles.push_back(sector_initialize(instance, gen));
+
+    }
+
+    // Inicialização aleatória
+    for (int i = 0; i < hyperparameters.swarm_size - sectorized_particles; ++i){
+
+      particles.push_back(random_initialize(instance.dimension, gen));
+    }
   }
 
   float g_best_of = cvrp::INF_F;

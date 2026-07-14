@@ -11,6 +11,7 @@ namespace pso
     int iterations = 0;  //Número de iterações a serem performadas
     int swarm_size = 0; // Number of particles in the swarm
     int elite_size = -1; // Número de partículas do enxame que passarão pelos mecanismos de busca local
+    int sectorized = 0;
   };
   
 } // namespace pso
