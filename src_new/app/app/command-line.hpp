@@ -6,9 +6,10 @@
 namespace app
 {
   struct ConfigIO{
-    std::string instance_path;
-    std::string output_dir;
-    bool showHelp;
+    std::string instance_path{};
+    std::string output_dir{};
+    int runs = 1;
+    bool showHelp{};
   };
 
   struct Parameters{

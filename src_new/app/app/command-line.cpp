@@ -52,6 +52,21 @@ parse_cli(int argc, const char* argv[])
       ++i;
     }
 
+    else if(valid_argument("--runs", i)){
+
+      try{
+        if(i+1 >= argc)
+          throw std::runtime_error("");
+
+        config.runs = std::stoi(argv[i+1]);  
+      }
+      catch(const std::exception& e){
+        throw std::runtime_error(std::format("Error: {} option requires an integer value.", arg));
+      }
+
+      ++i;
+    }
+
     else if(valid_argument("--swarm-size", i) || valid_argument("--swarm", i)){
 
       try{
@@ -117,14 +132,17 @@ parse_cli(int argc, const char* argv[])
   if(config.instance_path.empty())
     throw std::runtime_error("Error: Missing --input option.");
 
-  if(config.output_dir.empty())
-    throw std::runtime_error("Error: Missing --output option.");
+  // if(config.output_dir.empty())
+  //   throw std::runtime_error("Error: Missing --output option.");
 
   if(pso.iterations <= 0)
     throw std::runtime_error("Error: --iterations setting is missing or has an invalid value.");
 
   if(pso.swarm_size <= 0)
     throw std::runtime_error("Error: --swarm-size setting is missing or has an invalid value.");
+
+  if(config.runs <= 0)
+    throw std::runtime_error("Error: --runs setting must be positive.");
 
   return {config, pso};
 }
