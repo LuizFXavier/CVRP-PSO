@@ -14,7 +14,7 @@ operator-(const Particle& p1, const Particle& p2)
 {
   Velocity v;
 
-  std::unordered_map<int, int> positions;
+  std::vector<int> positions(p2.curr_solution.size(), 0);
 
   std::vector<int> updated_path = p2.curr_solution;
 
