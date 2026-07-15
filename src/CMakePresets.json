@@ -1,0 +1,35 @@
+{
+  "version": 2,
+  "configurePresets": [
+    {
+      "name": "default",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}"
+    },
+    {
+      "name": "profiling",
+      "displayName": "Build para Profiling (perf)",
+      "description": "Ativa otimizações, símbolos de debug e preserva o frame pointer.",
+      "inherits": "default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-O3 -g -fno-omit-frame-pointer"
+      },
+      "environment": {
+        "CXXFLAGS": "-fno-omit-frame-pointer"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "configurePreset": "default"
+    },
+    {
+      "name": "profiling",
+      "configurePreset": "profiling",
+      "displayName": "Build Profiling",
+      "description": "Compila o projeto com as configurações de profiling"
+    }
+  ]
+}

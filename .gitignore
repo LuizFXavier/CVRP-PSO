@@ -5,3 +5,8 @@ tsp_pso
 vrp_pso
 .vscode
 CMakeCache.txt
+build
+.venv
+venv
+__pycache__
+.cache
