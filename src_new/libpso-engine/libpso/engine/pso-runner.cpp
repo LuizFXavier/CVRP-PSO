@@ -61,7 +61,6 @@ run_pso(cvrp::Instance &instance, Hyperparameters hyperparameters)
 
   Particle g_best;
 
-  std::vector<Particle*> elite;
 
   auto min_particle_cmp = [](const Particle* a, const Particle* b) { return a->curr_of > b->curr_of; };
   auto max_particle_cmp = [](const Particle* a, const Particle* b) { return a->curr_of < b->curr_of; };
@@ -69,6 +68,8 @@ run_pso(cvrp::Instance &instance, Hyperparameters hyperparameters)
   // Loop principal do PSO
   for (int i = 0; i < hyperparameters.iterations; ++i){
     
+    std::vector<Particle*> elite;
+
     // Atualização do fitness de cada partícula
     for (auto& p : particles) {
       p.curr_of = fitness(p, instance);
@@ -91,10 +92,10 @@ run_pso(cvrp::Instance &instance, Hyperparameters hyperparameters)
 
     // Execução dos mecanismos de busca local nas partículas pertencentes à elite
     #pragma omp parallel for
-    for (auto& e : elite){
-      cvrp::local_search::optimize(e->curr_solution, instance);
+    for (int e = 0; e < elite.size(); ++e){
+      cvrp::local_search::optimize(elite[e]->curr_solution, instance);
 
-      e->curr_of = fitness(*e, instance);
+      elite[e]->curr_of = fitness(*(elite[e]), instance);
     }
 
     // Iteração para atualização de p_best e g_best
