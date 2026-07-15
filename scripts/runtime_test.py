@@ -48,9 +48,9 @@ dados = [["Mínimo:"],
 valores_custo = []
 valores_tempo = []
 
-nParticulas = [25]
-nRepeticoes = [5000]
-nElite = [5]
+nParticulas = [250, 25, 50, 25]
+nRepeticoes = [500, 5000, 5000, 5000]
+nElite = [200, 5, 5, 25]
 
 NUM_THREADS = ["1", "16"]
 
@@ -85,7 +85,7 @@ for caso_teste in arquivos_teste:
           environ ["OMP_NUM_THREADS"] = num_threads
           
           # Captura todas as execuções de uma vez
-          output = subprocess.check_output(comando).decode().strip()
+          output = subprocess.check_output(comando, env=environ).decode().strip()
           
           # Separa a string por quebras de linha
           linhas_output = output.split('\n')
