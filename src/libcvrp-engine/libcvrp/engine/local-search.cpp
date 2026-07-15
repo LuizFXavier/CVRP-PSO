@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <unordered_map>
 #include <vector>
-#include <omp.h>
 
 #include <libcvrp/engine/local-search.hpp>
 
@@ -91,21 +90,31 @@ namespace
   {   
     std::vector<insert_info> top3;
 
+    top3.reserve(3);
+
     auto cmp = [](insert_info& a, insert_info& b) {
         return a.cost < b.cost;
     };
     
     for(unsigned i = 0; i < r_ln.size() - 1; ++i){
-      if(top3.empty()){
-        top3.emplace_back(insert_info{i, i+1, insertion_cost(v, r_ln[i], r_ln[i+1], instance)});
-      }
-      else if (top3.size() < 3) {
+      // if(top3.empty()){
+      //   top3.emplace_back(insert_info{i, i+1, insertion_cost(v, r_ln[i], r_ln[i+1], instance)});
+      // }
+      if (top3.size() < 3) {
         top3.push_back(insert_info{i, i+1, insertion_cost(v, r_ln[i], r_ln[i+1], instance)});
-        std::sort(top3.begin(), top3.end(), cmp);
+        // std::sort(top3.begin(), top3.end(), cmp);
+        std::push_heap(top3.begin(), top3.end(), cmp);
       }
-      else if (auto c = insertion_cost(v, r_ln[i], r_ln[i+1], instance); c < top3.back().cost) {
-        top3.back() = insert_info{i, i+1, c};
-        std::sort(top3.begin(), top3.end(), cmp);
+      else if (auto c = insertion_cost(v, r_ln[i], r_ln[i+1], instance); c < top3.front().cost) {
+
+        std::pop_heap(top3.begin(), top3.end(), cmp);
+        top3.pop_back();
+
+        top3.push_back(insert_info{i, i+1, c});
+        std::push_heap(top3.begin(), top3.end(), cmp);
+        
+        // top3.back() = insert_info{i, i+1, c};
+        // std::sort(top3.begin(), top3.end(), cmp);
       }
     }
 
