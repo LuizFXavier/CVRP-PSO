@@ -15,7 +15,13 @@ struct Instance
   
   std::vector<cvrp::Client> clients{};
 
-  std::vector<std::vector<float>> distance_matrix{{}};
+  std::vector<float> distance_matrix{};
+
+  inline float 
+  client_distance(int from, int to)
+  {
+    return distance_matrix[from * clients.size() + to];
+  }
 };
 
 } // namespace cvrp
