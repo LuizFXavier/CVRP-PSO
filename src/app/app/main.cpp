@@ -5,7 +5,6 @@
 #include <chrono>
 
 #include <app/command-line.hpp>
-#include <libcvrp/engine/geometry.hpp>
 #include <libcvrp/engine/io.hpp>
 #include <libpso/engine/pso-runner.hpp>
 
@@ -16,7 +15,7 @@ main(int argc, const char *argv[])
 
   auto instance = cvrp::io::read_instance(configIO.instance_path);
 
-  instance.distance_matrix = cvrp::compute_distances(instance.clients);
+  instance.build_distance_matrix();
 
   for (int i = 0; i < configIO.runs; ++i){
 
