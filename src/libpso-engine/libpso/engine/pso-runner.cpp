@@ -75,8 +75,10 @@ run_pso(cvrp::Instance &instance, Hyperparameters hyperparameters)
       p.curr_of = fitness(p, instance);
 
       // Definição da elite das particulas
+      if (hyperparameters.elite_size <= 0)
+        continue;
 
-      if (elite.size() <= hyperparameters.elite_size){
+      if (elite.size() < hyperparameters.elite_size){
         elite.push_back(&p);
         std::push_heap(elite.begin(), elite.end(), max_particle_cmp);
       }
