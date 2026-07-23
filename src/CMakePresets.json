@@ -18,6 +18,14 @@
       "environment": {
         "CXXFLAGS": "-fno-omit-frame-pointer"
       }
+    },
+    {
+      "name": "debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
     }
   ],
   "buildPresets": [
@@ -30,6 +38,10 @@
       "configurePreset": "profiling",
       "displayName": "Build Profiling",
       "description": "Compila o projeto com as configurações de profiling"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug"
     }
   ]
 }
