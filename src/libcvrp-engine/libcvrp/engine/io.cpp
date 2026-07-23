@@ -2,9 +2,12 @@
 #include <string>
 #include <regex>
 #include <filesystem>
+#include <cmath>
 
 #include <libcvrp/engine/io.hpp>
 
+#include <libcvrp/core/CircleSector.hpp>
+#include <libcvrp/core/constants.hpp>
 #include <libcvrp/core/Instance.hpp>
 #include <libcvrp/engine/splitter.hpp>
 
@@ -76,7 +79,7 @@ read_instance(std::string instance_path)
     //Início da seção de demandas
     instance_file >> line;
     
-    for(int i = 0; i < instance.dimension; ++i){
+    for (int i = 0; i < instance.dimension; ++i){
       
       // Lê o índice do cliente no arquivo
       instance_file >> index;
@@ -85,8 +88,17 @@ read_instance(std::string instance_path)
       instance.clients[i].demand = demand;
     }
   }
-    
+
   instance_file.close();
+
+  // Cálculo da coordenada polar dos clientes
+  {
+    auto& clients = instance.clients;
+    for (int i = 1; i < clients.size(); ++i){
+      clients[i].polarAngle = CircleSector::positive_mod(
+				32768. * atan2(clients[i].y - clients[0].y, clients[i].x - clients[0].x) / PI);
+    }
+  }
   
   return instance;
     

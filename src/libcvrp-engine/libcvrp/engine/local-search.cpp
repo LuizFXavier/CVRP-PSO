@@ -13,7 +13,7 @@ namespace cvrp::local_search
 void 
 optimize(std::vector<int>& mega_tour, Instance& instance)
 {
-  auto routes = naive_split(mega_tour, instance);
+  auto routes = import_mega_tour(mega_tour, instance);
 
   apply_two_opt(routes, instance);
 
@@ -29,6 +29,24 @@ optimize(std::vector<int>& mega_tour, Instance& instance)
       ++tour_index;
     }
   }
+}
+
+std::vector<cvrp::Route> 
+import_mega_tour(std::vector<int> &mega_tour, Instance& instance)
+{
+  auto routes = naive_split(mega_tour, instance);
+
+  auto& clients = instance.clients;
+
+  for (auto& route : routes){
+    
+    route.sector.initialize(clients[route[1]].polarAngle);
+
+    for (int i = 1; i < route.size() - 1; ++i)
+      route.sector.extend(clients[route[i]].polarAngle);
+  }
+
+  return routes;
 }
 
 void 
@@ -277,6 +295,5 @@ apply_swap_star(std::vector<Route> &routes, Instance& instance)
     }
   }
 }
-
 
 } // namespace cvrp::local_search

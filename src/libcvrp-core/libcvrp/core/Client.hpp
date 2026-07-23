@@ -11,6 +11,7 @@ struct Client
   float x{};
   float y{};
   unsigned int demand{};
+  int polarAngle{};
 };
 
 inline float 
