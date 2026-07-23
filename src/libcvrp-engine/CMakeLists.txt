@@ -8,7 +8,6 @@ target_include_directories(libcvrp-engine
 target_sources(libcvrp-engine
   PRIVATE
   libcvrp/engine/io.cpp
-  libcvrp/engine/geometry.cpp
   libcvrp/engine/splitter.cpp
   libcvrp/engine/local-search.cpp
 )

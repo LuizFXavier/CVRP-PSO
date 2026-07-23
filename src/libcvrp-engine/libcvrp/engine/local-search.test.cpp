@@ -81,6 +81,8 @@ test_swap_star(){
   // Cliente G/6
   inst.clients.push_back({1.0f, 2.0f, 1});
 
+  inst.build_distance_matrix();
+
   cvrp::Route route1, route2;
 
   route1.path = {0, 1, 4, 5, 0};

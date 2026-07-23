@@ -22,6 +22,20 @@ struct Instance
   {
     return distance_matrix[from * clients.size() + to];
   }
+
+  inline void
+  build_distance_matrix()
+  {
+    std::vector<float> distances(clients.size() * clients.size());
+
+    for (int i = 0; i < clients.size(); ++i){
+      for (int j = 0; j < clients.size(); ++j){
+        distances[i * clients.size() + j] = distance(clients[i], clients[j]);
+      }
+    }
+    
+    distance_matrix = std::move(distances);
+  }
 };
 
 } // namespace cvrp
