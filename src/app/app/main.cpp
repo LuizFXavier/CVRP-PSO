@@ -5,7 +5,6 @@
 #include <chrono>
 
 #include <app/command-line.hpp>
-#include <libcvrp/engine/geometry.hpp>
 #include <libcvrp/engine/io.hpp>
 #include <libpso/engine/pso-runner.hpp>
 
