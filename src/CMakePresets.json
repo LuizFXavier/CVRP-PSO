@@ -13,6 +13,19 @@
       "inherits": "default",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-O3 -g -fno-omit-frame-pointer",
+        "USE_OPENMP": "OFF"
+      },
+      "environment": {
+        "CXXFLAGS": "-fno-omit-frame-pointer"
+      }
+    },
+    {
+      "name": "omp-profiling",
+      "displayName": "Profiling paralelo (com OpenMP)",
+      "inherits": "default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-O3 -g -fno-omit-frame-pointer"
       },
       "environment": {
@@ -21,8 +34,7 @@
     },
     {
       "name": "debug",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/${presetName}",
+      "inherits": "default",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
@@ -38,6 +50,12 @@
       "configurePreset": "profiling",
       "displayName": "Build Profiling",
       "description": "Compila o projeto com as configurações de profiling"
+    },
+    {
+      "name": "omp-profiling",
+      "configurePreset": "omp-profiling",
+      "displayName": "Profiling com OpenMP ativo",
+      "description": "Compila o projeto com as configurações de profiling com OpenMP ativo"
     },
     {
       "name": "debug",
