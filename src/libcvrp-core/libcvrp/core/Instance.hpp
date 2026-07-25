@@ -15,7 +15,27 @@ struct Instance
   
   std::vector<cvrp::Client> clients{};
 
-  std::vector<std::vector<float>> distance_matrix{{}};
+  std::vector<float> distance_matrix{};
+
+  inline float 
+  client_distance(int from, int to)
+  {
+    return distance_matrix[from * clients.size() + to];
+  }
+
+  inline void
+  build_distance_matrix()
+  {
+    std::vector<float> distances(clients.size() * clients.size());
+
+    for (int i = 0; i < clients.size(); ++i){
+      for (int j = 0; j < clients.size(); ++j){
+        distances[i * clients.size() + j] = distance(clients[i], clients[j]);
+      }
+    }
+    
+    distance_matrix = std::move(distances);
+  }
 };
 
 } // namespace cvrp

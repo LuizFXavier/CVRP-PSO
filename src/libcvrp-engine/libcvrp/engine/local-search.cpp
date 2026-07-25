@@ -13,7 +13,7 @@ namespace cvrp::local_search
 void 
 optimize(std::vector<int>& mega_tour, Instance& instance)
 {
-  auto routes = naive_split(mega_tour, instance);
+  auto routes = import_mega_tour(mega_tour, instance);
 
   apply_two_opt(routes, instance);
 
@@ -29,6 +29,24 @@ optimize(std::vector<int>& mega_tour, Instance& instance)
       ++tour_index;
     }
   }
+}
+
+std::vector<cvrp::Route> 
+import_mega_tour(std::vector<int> &mega_tour, Instance& instance)
+{
+  auto routes = naive_split(mega_tour, instance);
+
+  auto& clients = instance.clients;
+
+  for (auto& route : routes){
+    
+    route.sector.initialize(clients[route[1]].polarAngle);
+
+    for (int i = 1; i < route.size() - 1; ++i)
+      route.sector.extend(clients[route[i]].polarAngle);
+  }
+
+  return routes;
 }
 
 void 
@@ -78,11 +96,15 @@ namespace
   float 
   insertion_cost(unsigned v, unsigned p, unsigned s, Instance& instance) 
   {
-    auto& clients = instance.clients;
+    // auto& clients = instance.clients;
 
-    return distance(clients[p], clients[v]) +
-           distance(clients[v], clients[s]) -
-           distance(clients[p], clients[s]);
+    return instance.client_distance(p, v) +
+           instance.client_distance(v, s) -
+           instance.client_distance(p, s);
+
+    // return distance(clients[p], clients[v]) +
+    //        distance(clients[v], clients[s]) -
+    //        distance(clients[p], clients[s]);
   }
 
   std::vector<insert_info>
@@ -97,12 +119,10 @@ namespace
     };
     
     for(unsigned i = 0; i < r_ln.size() - 1; ++i){
-      // if(top3.empty()){
-      //   top3.emplace_back(insert_info{i, i+1, insertion_cost(v, r_ln[i], r_ln[i+1], instance)});
-      // }
+
       if (top3.size() < 3) {
         top3.push_back(insert_info{i, i+1, insertion_cost(v, r_ln[i], r_ln[i+1], instance)});
-        // std::sort(top3.begin(), top3.end(), cmp);
+        
         std::push_heap(top3.begin(), top3.end(), cmp);
       }
       else if (auto c = insertion_cost(v, r_ln[i], r_ln[i+1], instance); c < top3.front().cost) {
@@ -113,8 +133,6 @@ namespace
         top3.push_back(insert_info{i, i+1, c});
         std::push_heap(top3.begin(), top3.end(), cmp);
         
-        // top3.back() = insert_info{i, i+1, c};
-        // std::sort(top3.begin(), top3.end(), cmp);
       }
     }
 
@@ -198,6 +216,10 @@ apply_swap_star(std::vector<Route> &routes, Instance& instance)
   for(unsigned i = 0; i < routes.size()-1; ++i){
     for(unsigned j = i+1; j < routes.size(); ++j){
 
+      // Pula rotas que não intersectam os setores circulares
+      if (!(routes[i].sector.overlap(routes[j].sector)))
+        continue;
+
       std::unordered_map<unsigned, std::vector<insert_info>> top3_insert_v;
       std::unordered_map<unsigned, std::vector<insert_info>> top3_insert_u;
 
@@ -277,6 +299,5 @@ apply_swap_star(std::vector<Route> &routes, Instance& instance)
     }
   }
 }
-
 
 } // namespace cvrp::local_search

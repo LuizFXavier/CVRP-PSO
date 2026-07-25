@@ -19,11 +19,17 @@ target_link_libraries(libpso-engine
   libpso-core
 )
 
-find_package(OpenMP REQUIRED)
-target_link_libraries(libpso-engine
-  PUBLIC
-  OpenMP::OpenMP_CXX
-)
+option(USE_OPENMP "Ativa o suporte ao OpenMP" ON)
+
+if(USE_OPENMP)
+    find_package(OpenMP)
+    if(OpenMP_CXX_FOUND)
+        target_link_libraries(libpso-engine
+                              PUBLIC
+                              OpenMP::OpenMP_CXX
+                            )
+    endif()
+endif()
 
 if(BUILD_TESTING)
   # Procura todos os arquivos de teste na pasta

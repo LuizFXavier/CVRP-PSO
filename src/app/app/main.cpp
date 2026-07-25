@@ -15,6 +15,8 @@ main(int argc, const char *argv[])
 
   auto instance = cvrp::io::read_instance(configIO.instance_path);
 
+  instance.build_distance_matrix();
+
   for (int i = 0; i < configIO.runs; ++i){
 
     auto start_time = std::chrono::high_resolution_clock::now();

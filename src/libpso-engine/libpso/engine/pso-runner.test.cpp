@@ -41,6 +41,8 @@ create_simple_instance()
 
   // Cliente na posição (3,4). Distância de 5
   inst.clients.push_back({3.0f, 4.0f, 5});
+
+  inst.build_distance_matrix();
   
   return inst;
 }

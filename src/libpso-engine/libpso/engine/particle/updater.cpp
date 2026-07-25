@@ -121,12 +121,16 @@ fitness(Particle& p, cvrp::Instance& instance)
     if(clients[p.curr_solution[i+1]].demand <= curr_capacity){
 
       curr_capacity -= clients[p.curr_solution[i + 1]].demand;
-      distance += cvrp::distance(clients[p.curr_solution[i]], clients[p.curr_solution[i+1]]);
+      // distance += cvrp::distance(clients[p.curr_solution[i]], clients[p.curr_solution[i+1]]);
+      distance += instance.client_distance(p.curr_solution[i], p.curr_solution[i+1]);
     }
     else{
-      distance += cvrp::distance(clients[p.curr_solution[i]], clients[0]);
+      // distance += cvrp::distance(clients[p.curr_solution[i]], clients[0]);
+      distance += instance.client_distance(p.curr_solution[i], 0);
       curr_capacity = instance.capacity;
-      distance += cvrp::distance(clients[0], clients[p.curr_solution[i+1]]);
+
+      // distance += cvrp::distance(clients[0], clients[p.curr_solution[i+1]]);
+      distance += instance.client_distance(0, p.curr_solution[i+1]);
       curr_capacity -= clients[p.curr_solution[i+1]].demand;
     }
 
