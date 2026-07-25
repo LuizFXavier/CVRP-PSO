@@ -3,7 +3,7 @@ import os
 
 
 base_instance_path = os.path.expanduser("~/Projects/lscad/CVRP-PSO/instances/CMT/")
-executable_path = os.path.expanduser("~/Projects/lscad/CVRP-PSO/src_new/build/profiling/app/cvrp-pso")
+executable_path = os.path.expanduser("~/Projects/lscad/CVRP-PSO/src/build/profiling/app/cvrp-pso")
 output_path = os.path.expanduser("~/Projects/lscad/CVRP-PSO/profiling/")
 
 flamegraph_path = os.path.expanduser("~/Desktop/FlameGraph")
