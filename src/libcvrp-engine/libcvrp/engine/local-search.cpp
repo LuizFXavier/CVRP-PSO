@@ -216,6 +216,10 @@ apply_swap_star(std::vector<Route> &routes, Instance& instance)
   for(unsigned i = 0; i < routes.size()-1; ++i){
     for(unsigned j = i+1; j < routes.size(); ++j){
 
+      // Pula rotas que não intersectam os setores circulares
+      if (!(routes[i].sector.overlap(routes[j].sector)))
+        continue;
+
       std::unordered_map<unsigned, std::vector<insert_info>> top3_insert_v;
       std::unordered_map<unsigned, std::vector<insert_info>> top3_insert_u;
 

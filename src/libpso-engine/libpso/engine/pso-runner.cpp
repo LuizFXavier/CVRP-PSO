@@ -2,7 +2,6 @@
 #include <stdexcept>
 #include <format>
 #include <algorithm>
-#include <omp.h>
 
 #include <libpso/engine/pso-runner.hpp>
 
