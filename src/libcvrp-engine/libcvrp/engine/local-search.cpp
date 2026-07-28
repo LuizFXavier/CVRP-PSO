@@ -220,14 +220,14 @@ apply_swap_star(std::vector<Route> &routes, Instance& instance)
       if (!(routes[i].sector.overlap(routes[j].sector)))
         continue;
 
-      std::unordered_map<unsigned, std::vector<insert_info>> top3_insert_v;
-      std::unordered_map<unsigned, std::vector<insert_info>> top3_insert_u;
+      std::vector<std::vector<insert_info>> top3_insert_v(routes[i].size() - 1);
+      std::vector<std::vector<insert_info>> top3_insert_u(routes[j].size() - 1);
 
       // Pré-processar melhores custos de inserção:
-      for (unsigned id_v = 1; id_v < routes[i].size()-1; ++id_v)
+      for (unsigned id_v = 1; id_v < routes[i].size() - 1; ++id_v)
         top3_insert_v[id_v] = findTop3Locations(routes[i][id_v], routes[j], instance);
 
-      for (unsigned id_u = 1; id_u < routes[j].size()-1; ++id_u)
+      for (unsigned id_u = 1; id_u < routes[j].size() - 1; ++id_u)
         top3_insert_u[id_u] = findTop3Locations(routes[j][id_u], routes[i], instance);
 
       double best_swap_cost = 0;
@@ -237,8 +237,8 @@ apply_swap_star(std::vector<Route> &routes, Instance& instance)
 
       unsigned best_v_id, best_u_id;
 
-      for (unsigned id_v = 1; id_v < routes[i].size()-1; ++id_v){
-        for (unsigned id_u = 1; id_u < routes[j].size()-1; ++id_u){
+      for (unsigned id_v = 1; id_v < routes[i].size() - 1; ++id_v){
+        for (unsigned id_u = 1; id_u < routes[j].size() - 1; ++id_u){
             
           unsigned v = routes[i][id_v], u = routes[j][id_u];
 
