@@ -88,31 +88,70 @@ apply_two_opt(std::vector<Route> &routes, Instance& instance)
 namespace
 {
   struct insert_info{
-    unsigned pred;
-    unsigned suce;
-    float cost;
+    unsigned pred{};
+    unsigned suce{};
+    float cost{};
+  };
+
+  struct Top3Insertion
+  {
+    insert_info best_insertions[3];
+    
+    void 
+    compareAndAdd(insert_info candidate)
+    {
+      if (candidate.cost >= best_insertions[2].cost) 
+        return;
+
+      else if (candidate.cost >= best_insertions[1].cost){
+
+        best_insertions[2] = candidate;
+      }
+      else if (candidate.cost >= best_insertions[0].cost){
+
+        best_insertions[2] = best_insertions[1];
+        best_insertions[1] = candidate;
+      }
+      else{
+        best_insertions[2] = best_insertions[1];
+        best_insertions[1] = best_insertions[0];
+        best_insertions[0] = candidate;
+      }
+
+    }
+    insert_info
+    get_best_insertion_except_id(unsigned id){
+
+      if (best_insertions[0].pred != id && best_insertions[0].suce != id)
+        return best_insertions[0];
+
+      if (best_insertions[1].pred != id && best_insertions[1].suce != id)
+        return best_insertions[1];
+
+      if (best_insertions[2].pred != id && best_insertions[2].suce != id)
+        return best_insertions[2];
+
+      return {0, 0, cvrp::INF_F};
+    }
+    Top3Insertion(){
+      best_insertions[0].cost = cvrp::INF_F;
+      best_insertions[1].cost = cvrp::INF_F;
+      best_insertions[2].cost = cvrp::INF_F;
+    }
   };
 
   float 
   insertion_cost(unsigned v, unsigned p, unsigned s, Instance& instance) 
   {
-    // auto& clients = instance.clients;
-
     return instance.client_distance(p, v) +
            instance.client_distance(v, s) -
            instance.client_distance(p, s);
-
-    // return distance(clients[p], clients[v]) +
-    //        distance(clients[v], clients[s]) -
-    //        distance(clients[p], clients[s]);
   }
 
-  std::vector<insert_info>
+  Top3Insertion
   findTop3Locations(unsigned v, Route &r_ln, Instance& instance)
   {   
-    std::vector<insert_info> top3;
-
-    top3.reserve(3);
+    Top3Insertion top3;
 
     auto cmp = [](insert_info& a, insert_info& b) {
         return a.cost < b.cost;
@@ -120,20 +159,7 @@ namespace
     
     for(unsigned i = 0; i < r_ln.size() - 1; ++i){
 
-      if (top3.size() < 3) {
-        top3.push_back(insert_info{i, i+1, insertion_cost(v, r_ln[i], r_ln[i+1], instance)});
-        
-        std::push_heap(top3.begin(), top3.end(), cmp);
-      }
-      else if (auto c = insertion_cost(v, r_ln[i], r_ln[i+1], instance); c < top3.front().cost) {
-
-        std::pop_heap(top3.begin(), top3.end(), cmp);
-        top3.pop_back();
-
-        top3.push_back(insert_info{i, i+1, c});
-        std::push_heap(top3.begin(), top3.end(), cmp);
-        
-      }
+      top3.compareAndAdd(insert_info{i, i+1, insertion_cost(v, r_ln[i], r_ln[i+1], instance)});
     }
 
     return top3;
@@ -220,8 +246,8 @@ apply_swap_star(std::vector<Route> &routes, Instance& instance)
       if (!(routes[i].sector.overlap(routes[j].sector)))
         continue;
 
-      std::vector<std::vector<insert_info>> top3_insert_v(routes[i].size() - 1);
-      std::vector<std::vector<insert_info>> top3_insert_u(routes[j].size() - 1);
+      std::vector<Top3Insertion> top3_insert_v(routes[i].size() - 1);
+      std::vector<Top3Insertion> top3_insert_u(routes[j].size() - 1);
 
       // Pré-processar melhores custos de inserção:
       for (unsigned id_v = 1; id_v < routes[i].size() - 1; ++id_v)
@@ -249,44 +275,33 @@ apply_swap_star(std::vector<Route> &routes, Instance& instance)
             continue;
           
           // Melhor inserção de v em r', fora inserção no mesmo lugar que o U e desconsiderando este da rota
-          auto k = std::min_element(top3_insert_v[id_v].begin(), top3_insert_v[id_v].end(),
-                                    [&id_u](insert_info& a, insert_info& b) {
-                                      if (a.pred == id_u || a.suce == id_u) return false;
-                                      if (b.pred == id_u || b.suce == id_u) return true;
-                                      return (a.cost < b.cost);
-                                    });
 
-          k->cost = (k->suce != id_u && k->pred != id_u) ? k->cost : cvrp::INF_F;
+          auto k = top3_insert_v[id_v].get_best_insertion_except_id(id_u);
 
           // Melhor inserção de u em r, fora inserção no mesmo lugar que o V e desconsiderando este da rota
-          auto k_ln = std::min_element(top3_insert_u[id_u].begin(), top3_insert_u[id_u].end(),
-                                      [&id_v](insert_info& a, insert_info& b) {
-                                          if (a.pred == id_v || a.suce == id_v) return false;
-                                          if (b.pred == id_v || b.suce == id_v) return true;
-                                          return (a.cost < b.cost);
-                                      });
 
-          k_ln->cost = (k_ln->suce != id_v && k_ln->pred != id_v) ? k_ln->cost : cvrp::INF_F;
+          auto k_ln = top3_insert_u[id_u].get_best_insertion_except_id(id_v);
 
+          // Custo de inserção de V na exata posição de U
           float swap_v_in_u = insertion_cost(routes[i][id_v], routes[j][id_u -1], routes[j][id_u+1], instance);
 
           // Melhor custo de inserção de V em r'
-          float v_to_r_ln = std::min(swap_v_in_u, k->cost) - insertion_cost(routes[i][id_v], routes[i][id_v-1], routes[i][id_v+1], instance);
+          float v_to_r_ln = std::min(swap_v_in_u, k.cost) - insertion_cost(routes[i][id_v], routes[i][id_v-1], routes[i][id_v+1], instance);
 
-          // Melhor custo de inserção de U em r
+          // Custo de inserção de U na exata posição de V
           float swap_u_in_v = insertion_cost(routes[j][id_u], routes[i][id_v -1], routes[i][id_v+1], instance);
-
           
-          float u_to_r = std::min(swap_u_in_v, k_ln->cost)- insertion_cost(routes[j][id_u], routes[j][id_u-1], routes[j][id_u+1], instance);
+          // Melhor custo de inserção de U em r
+          float u_to_r = std::min(swap_u_in_v, k_ln.cost)- insertion_cost(routes[j][id_u], routes[j][id_u-1], routes[j][id_u+1], instance);
 
           // Atualizar a melhor troca encontrada
           if (auto c = v_to_r_ln + u_to_r; c < best_swap_cost) {
 
             best_swap_cost = c;
-            best_v = swap_v_in_u < k->cost ? insert_info{id_u-1, id_u+1, swap_v_in_u} : *k;
+            best_v = swap_v_in_u < k.cost ? insert_info{id_u-1, id_u+1, swap_v_in_u} : k;
             best_v_id = id_v;
 
-            best_u = swap_u_in_v < k_ln->cost ? insert_info{id_v-1, id_v+1, swap_u_in_v} : *k_ln;
+            best_u = swap_u_in_v < k_ln.cost ? insert_info{id_v-1, id_v+1, swap_u_in_v} : k_ln;
             best_u_id = id_u;
             
           }
