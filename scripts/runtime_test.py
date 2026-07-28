@@ -22,7 +22,7 @@ elif argv[1].upper() == "-D":
 else:
     raise Exception("Não se sabe se é arquivo ou diretório!")
 
-caminho_output = "./PSO_data.xlsx"
+caminho_output = "./PSO_data_map_to_vector.xlsx"
 
 if len(argv) == 4:
     caminho_output = argv[3]
@@ -56,7 +56,7 @@ NUM_THREADS = ["1", "16"]
 
 count = 1
 
-EXECUTAVEL = os.path.expanduser("~/Projects/lscad/CVRP-PSO/src_new/build/default/app/cvrp-pso")
+EXECUTAVEL = os.path.expanduser("~/Projects/lscad/CVRP-PSO/src/build/default/app/cvrp-pso")
 
 for caso_teste in arquivos_teste:
     print(caso_teste)
@@ -66,7 +66,7 @@ for caso_teste in arquivos_teste:
     instancia = ler_instancia(caminho + caso_teste)
 
     for num_threads in NUM_THREADS:
-      for c in range(len(nRepeticoes)):
+      for c in range(len(nRepeticoes[:1])):
           
           print(caso_teste.split("/")[-1], ", threads:", num_threads, ", ", c)
           
