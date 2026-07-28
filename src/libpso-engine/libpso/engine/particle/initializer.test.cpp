@@ -27,10 +27,10 @@ random_initializer_test(){
   if (!particle.curr_solution.size()){
     throw std::runtime_error("Error: Random solution not initialized!");
   }
-  else if (!particle.curr_solution[0] == 0){
+  else if (!(particle.curr_solution[0] == 0)){
     throw std::runtime_error("Error: Random solution does not start at depot!");
   }
-  else if (!particle.curr_solution[dimension] == 0){
+  else if (!(particle.curr_solution[dimension] == 0)){
     throw std::runtime_error("Error: Random solution does not end at depot!");
   }
   
