@@ -22,6 +22,19 @@ main()
   return 0;
 }
 
+std::string 
+vector_to_string(const std::vector<int>& vec) {
+    std::string result = "[";
+    for (size_t i = 0; i < vec.size(); ++i) {
+        result += std::to_string(vec[i]);
+        if (i < vec.size() - 1) {
+            result += ", ";
+        }
+    }
+    result += "]";
+    return result;
+}
+
 void 
 test_two_opt()
 {
@@ -54,7 +67,8 @@ test_two_opt()
   for (int i = 0; i < comparison.size(); ++i){
 
     if (comparison[i] != routes[0].path[i])
-      throw std::runtime_error(std::format("Error: two-opt did not produce correct output! Expected {}, but got {}", comparison, routes[0].path));
+      throw std::runtime_error(std::format("Error: two-opt did not produce correct output! Expected {}, but got {}", 
+                                            vector_to_string(comparison), vector_to_string(routes[0].path)));
   }
 }
 
@@ -102,13 +116,13 @@ test_swap_star(){
   for (int i = 0; i < comparison1.size(); ++i){
 
     if (comparison1[i] != routes[0].path[i])
-      throw std::runtime_error(std::format("Error: Swap star failed on first route! Expected {}, but got {}", comparison1, routes[0].path));
+      throw std::runtime_error(std::format("Error: Swap star failed on first route! Expected {}, but got {}", vector_to_string(comparison1), vector_to_string(routes[0].path)));
   }
 
   for (int i = 0; i < comparison2.size(); ++i){
 
     if (comparison2[i] != routes[1].path[i])
-      throw std::runtime_error(std::format("Error: Swap star failed on second route! Expected {}, but got {}", comparison2, routes[1].path));
+      throw std::runtime_error(std::format("Error: Swap star failed on second route! Expected {}, but got {}", vector_to_string(comparison2), vector_to_string(routes[1].path)));
   }
 }
 

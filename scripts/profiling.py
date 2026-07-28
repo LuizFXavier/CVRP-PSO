@@ -4,18 +4,19 @@ import os
 
 base_instance_path = os.path.expanduser("~/Projects/lscad/CVRP-PSO/instances/CMT/")
 executable_path = os.path.expanduser("~/Projects/lscad/CVRP-PSO/src/build/profiling/app/cvrp-pso")
-output_path = os.path.expanduser("~/Projects/lscad/CVRP-PSO/profiling/")
+# output_path = os.path.expanduser("~/Projects/lscad/CVRP-PSO/profiling/map_to_vector_top3")
+output_path = os.path.expanduser("/mnt/storage/profiling/simple_top3")
 
 flamegraph_path = os.path.expanduser("~/Desktop/FlameGraph")
 stackcollapse_script = os.path.join(flamegraph_path, "stackcollapse-perf.pl")
 flamegraph_script = os.path.join(flamegraph_path, "flamegraph.pl")
 
-instances = ["CMT1", "CMT2", "CMT3", "CMT4", "CMT5"]
+instances = ["CMT1", "CMT2", "CMT3", "CMT4", "CMT5", "CMT11", "CMT12"]
 iterations = ["5000"]
-swarm_sizes = ["25", "50"]
-elite_sizes = ["1", "5"]
+swarm_sizes = ["25"]
+elite_sizes = ["5"]
 
-for inst in instances[1:]:
+for inst in instances:
   for iter_count in iterations:
     for swarm in swarm_sizes:
       for elite in elite_sizes:
