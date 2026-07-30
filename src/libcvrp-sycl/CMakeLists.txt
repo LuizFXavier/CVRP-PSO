@@ -8,6 +8,7 @@ target_include_directories(libcvrp-sycl
 target_sources(libcvrp-sycl
   PRIVATE
   libcvrp/sycl/local-search.cpp
+  libcvrp/sycl/splitter.cpp
 )
 
 target_link_libraries(libcvrp-sycl
@@ -41,7 +42,7 @@ if(BUILD_TESTING)
 
     target_link_libraries(${TEST_TARGET_NAME} 
       PRIVATE 
-      libcvrp-engine
+      libcvrp-sycl
     )
 
     # Registra o teste no CTest
