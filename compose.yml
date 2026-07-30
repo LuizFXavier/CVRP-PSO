@@ -1,0 +1,55 @@
+services:
+  cvrp-pso-sycl-dev:
+    image: luizfxavier/cvrp-pso-sycl-dev:0.1
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    working_dir: /app/src
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: cdi
+              device_ids:
+                - nvidia.com/gpu=all
+              capabilities: [gpu]
+
+    environment:
+      - ACPP_TARGETS=generic
+      - ACPP_DEBUG_LEVEL=1
+      - TEST_INPUT_DATASET=/app/instances/CMT/CMT1.vrp
+      - TEST_NUM_RUNS=1
+      - TEST_ITERATIONS=5
+      - TEST_SWARM_SIZE=10
+      - TEST_ELITE_SIZE=1
+      - HOST_OUTPUT_DIR=./output
+
+    volumes:
+      - type: bind
+        source: ./src
+        target: /app/src
+
+      - type: bind
+        source: ./instances/
+        target: /app/instances
+      
+      - type: bind
+        source: ./scripts/
+        target: /app/scripts
+
+      - type: bind
+        source: ./output
+        target: /app/output
+
+      - type: volume
+        # source: ../out/
+        target: /app/build/
+
+    command: >
+      /bin/bash -c "
+        chmod +x /app/scripts/sycl_dev_env.sh
+        /app/scripts/sycl_dev_env.sh;   
+      "
+
