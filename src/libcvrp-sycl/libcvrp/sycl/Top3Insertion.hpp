@@ -7,9 +7,32 @@ namespace cvrp::sycl_engine
 
 struct insert_info
 {
-  int pred{};
-  int suce{};
+  int insert_index{};
+  int client_pred{};
+  int client_suce{};
   float cost{};
+};
+
+struct BestSwap
+{
+  float total_cost;
+  int v_tour_id;
+  int u_tour_id;
+  int v_tour_dest;
+  int u_tour_dest;
+  // int best_v_id;
+  // int best_u_id;
+  // insert_info best_v;
+  // insert_info best_u;
+};
+
+struct FindBestSwap
+{
+  BestSwap 
+  operator()(const BestSwap& a, const BestSwap& b) const 
+  {
+    return (a.total_cost < b.total_cost) ? a : b;
+  }
 };
 
 struct Top3Insertion
@@ -39,18 +62,18 @@ struct Top3Insertion
 
   }
   insert_info
-  get_best_insertion_except_id(unsigned id){
+  get_best_insertion_except_client(int client){
 
-    if (best_insertions[0].pred != id && best_insertions[0].suce != id)
+    if (best_insertions[0].client_pred != client && best_insertions[0].client_suce != client)
       return best_insertions[0];
 
-    if (best_insertions[1].pred != id && best_insertions[1].suce != id)
+    if (best_insertions[1].client_pred != client && best_insertions[1].client_suce != client)
       return best_insertions[1];
 
-    if (best_insertions[2].pred != id && best_insertions[2].suce != id)
+    if (best_insertions[2].client_pred != client && best_insertions[2].client_suce != client)
       return best_insertions[2];
 
-    return {0, 0, cvrp::INF_F};
+    return {0, 0, 0, cvrp::INF_F};
   }
   Top3Insertion(){
     best_insertions[0].cost = cvrp::INF_F;

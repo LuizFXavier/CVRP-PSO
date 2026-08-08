@@ -3,12 +3,13 @@
 #include <stdexcept>
 #include <format>
 
-#include <libcvrp/engine/local-search.hpp>
+#include <libcvrp/sycl/local-search.hpp>
 
 #include <libcvrp/core/Instance.hpp>
 #include <libcvrp/core/Route.hpp>
 #include <libcvrp/core/CircleSector.hpp>
 #include <libcvrp/core/constants.hpp>
+#include <libcvrp/sycl/ExecutionContext.hpp>
 
 void test_two_opt();
 void test_swap_star();
@@ -18,8 +19,8 @@ int
 main()
 {
   test_two_opt();
-  test_swap_star();
   test_route_circle_sector();
+  test_swap_star();
   return 0;
 }
 
@@ -55,28 +56,33 @@ test_two_opt()
   // Cliente na posição (0,1)
   inst.clients.push_back({0.0f, 1.0f, 1});
 
-  cvrp::Route route;
+  inst.build_distance_matrix();
 
-  route.path = {0, 2, 1, 3, 0};
+  std::vector<int> mega_tour = {0, 2, 1, 3, 0};
 
-  std::vector<cvrp::Route> routes = {route};
+  cvrp::sycl_engine::DeviceRoute route;
 
-  cvrp::local_search::apply_two_opt(routes, inst);
+  route.size = 3;
+  route.start_index = 1;
+ 
+  std::vector<cvrp::sycl_engine::DeviceRoute> routes = {route};
+
+  cvrp::sycl_engine::local_search::apply_two_opt(mega_tour, routes, inst);
 
   std::vector<int> comparison = {0, 1, 2, 3, 0};
 
   for (int i = 0; i < comparison.size(); ++i){
 
-    if (comparison[i] != routes[0].path[i])
+    if (comparison[i] != mega_tour[i])
       throw std::runtime_error(std::format("Error: two-opt did not produce correct output! Expected {}, but got {}", 
-                                            vector_to_string(comparison), vector_to_string(routes[0].path)));
+                                            vector_to_string(comparison), vector_to_string(mega_tour)));
   }
 }
 
 void 
 test_swap_star(){
   cvrp::Instance inst;
-  inst.dimension = 6; // 1 Depósito e 5 Clientes
+  inst.dimension = 7; // 1 Depósito e 5 Clientes
   inst.capacity = 10;
   
   // Depósito A na origem (0,0)
@@ -102,29 +108,43 @@ test_swap_star(){
 
   inst.build_distance_matrix();
 
-  cvrp::Route route1, route2;
+  cvrp::sycl_engine::ExecutionContext ctx(1, inst.clients.size());
 
-  route1.path = {0, 1, 4, 5, 0};
-  route2.path = {0, 6, 2, 3, 0};
+  ctx.load_instance(inst);
 
-  std::vector<cvrp::Route> routes = {route1, route2};
+  std::vector<int> mega_tour = {0, 1, 4, 5, 6, 2, 3, 0};
 
-  cvrp::local_search::apply_swap_star(routes, inst);
+  cvrp::sycl_engine::DeviceRoute route1, route2;
 
-  std::vector<int> comparison1 = {0, 1, 4, 6, 0};
-  std::vector<int> comparison2 = {0, 5, 2, 3, 0};
+  route1.size = 3;
+  route2.size = 3;
 
-  for (int i = 0; i < comparison1.size(); ++i){
+  route1.start_index = 1;
+  route2.start_index = 4;
 
-    if (comparison1[i] != routes[0].path[i])
-      throw std::runtime_error(std::format("Error: Swap star failed on first route! Expected {}, but got {}", vector_to_string(comparison1), vector_to_string(routes[0].path)));
+  std::vector<cvrp::sycl_engine::DeviceRoute> routes = {route1, route2};
+
+  int* my_device_tour = ctx.d_swarm_mega_tours;
+  cvrp::sycl_engine::DeviceRoute* my_device_routes = ctx.d_swarm_routes;
+  cvrp::sycl_engine::Top3Insertion* my_device_top3 = ctx.d_swarm_top3;
+  cvrp::sycl_engine::BestSwap* my_best_swap = ctx.d_best_swap;
+
+  ctx.q.memcpy(my_device_tour, mega_tour.data(), mega_tour.size() * sizeof(int)).wait();
+  ctx.q.memcpy(my_device_routes, routes.data(), routes.size() * sizeof(cvrp::sycl_engine::DeviceRoute)).wait();
+
+  cvrp::sycl_engine::local_search::apply_swap_star(routes, inst, cvrp::sycl_engine::ContextData{my_device_tour, my_device_routes, my_device_top3, my_best_swap}, ctx);
+
+  std::vector<int> comparison = {0, 1, 4, 6, 5, 2, 3, 0};
+
+  ctx.q.memcpy(mega_tour.data(), my_device_tour, mega_tour.size() * sizeof(int)).wait();
+  
+
+  for (int i = 0; i < comparison.size(); ++i){
+
+    if (comparison[i] != mega_tour[i])
+      throw std::runtime_error(std::format("Error: Swap star failed on first route! Expected {}, but got {}", vector_to_string(comparison), vector_to_string(mega_tour)));
   }
 
-  for (int i = 0; i < comparison2.size(); ++i){
-
-    if (comparison2[i] != routes[1].path[i])
-      throw std::runtime_error(std::format("Error: Swap star failed on second route! Expected {}, but got {}", vector_to_string(comparison2), vector_to_string(routes[1].path)));
-  }
 }
 
 void 
@@ -187,7 +207,7 @@ test_route_circle_sector()
 
   std::vector<int> tour = {0, 3, 2, 1, 4, 5, 0};
 
-  auto routes = cvrp::local_search::import_mega_tour(tour, inst);
+  auto routes = cvrp::sycl_engine::local_search::import_mega_tour(tour, inst);
 
   if (routes[0].sector.start != 0)
     throw std::runtime_error(std::format("Error: Incorrect first route circle start! Expected {}, but got {}", 0, routes[0].sector.start));

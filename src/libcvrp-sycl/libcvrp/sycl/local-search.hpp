@@ -8,7 +8,7 @@
 
 namespace cvrp::sycl_engine::local_search
 {
-  void optimize(std::vector<int>& mega_tour, Instance& instance);
+  void optimize(std::vector<int>& mega_tour, Instance& instance, int start_id, ExecutionContext& ctx);
   
   std::vector<DeviceRoute> import_mega_tour(std::vector<int>& mega_tour, Instance& instance);
   
@@ -16,8 +16,6 @@ namespace cvrp::sycl_engine::local_search
 
   void apply_swap_star( std::vector<DeviceRoute>& routes,
                         Instance& instance, 
-                        int* my_device_tour, 
-                        DeviceRoute* my_device_routes,
-                        Top3Insertion* my_device_top3,
+                        ContextData my_ctx_data,
                         ExecutionContext& ctx);
 } // namespace cvrp::sycl

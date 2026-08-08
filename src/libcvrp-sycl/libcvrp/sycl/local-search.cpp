@@ -11,7 +11,7 @@
 namespace cvrp::sycl_engine::local_search
 {
 void 
-optimize(std::vector<int>& mega_tour, Instance& instance, ExecutionContext& ctx, int start_id)
+optimize(std::vector<int>& mega_tour, Instance& instance, int start_id, ExecutionContext& ctx)
 {
   auto routes = import_mega_tour(mega_tour, instance);
 
@@ -20,12 +20,14 @@ optimize(std::vector<int>& mega_tour, Instance& instance, ExecutionContext& ctx,
   int* my_device_tour = ctx.d_swarm_mega_tours + (start_id * ctx.max_clients_per_tour);
   DeviceRoute* my_device_routes = ctx.d_swarm_routes + (start_id * ctx.max_routes_per_tour);
   Top3Insertion* my_device_top3 = ctx.d_swarm_top3 + (start_id * ctx.max_routes_per_tour);
+  BestSwap* my_best_swap = ctx.d_best_swap + (start_id);
 
   ctx.q.memcpy(my_device_tour, mega_tour.data(), mega_tour.size() * sizeof(int)).wait();
   ctx.q.memcpy(my_device_routes, routes.data(), routes.size() * sizeof(DeviceRoute)).wait();
 
-  apply_swap_star(routes, instance, my_device_tour, my_device_routes, my_device_top3, ctx);
+  apply_swap_star(routes, instance, ContextData{my_device_tour, my_device_routes, my_device_top3, my_best_swap}, ctx);
 
+  ctx.q.memcpy(mega_tour.data(), my_device_tour, mega_tour.size() * sizeof(int)).wait();
 }
 
 std::vector<DeviceRoute> 
@@ -98,7 +100,7 @@ apply_two_opt(std::vector<int>& mega_tour, std::vector<DeviceRoute>& routes, cvr
 namespace
 {
 
-  float 
+  inline float 
   insertion_cost(int v, int p, int s, cvrp::sycl_engine::DeviceInstance instance) 
   {
 
@@ -108,13 +110,20 @@ namespace
   }
 
   inline Top3Insertion
-  findTop3Locations(int v, int* my_device_tour, DeviceRoute* r_ln, cvrp::sycl_engine::DeviceInstance instance)
+  findTop3Locations(int client_v, int* my_device_tour, DeviceRoute* r_ln, cvrp::sycl_engine::DeviceInstance instance)
   {   
     Top3Insertion top3;
 
-    for (auto i = r_ln->start_index; i < r_ln->size; ++i){
+    // Percorre os espaços entre os clientes para definir melhores inserções
+    for (auto i = 0; i <= r_ln->size; ++i){
 
-      top3.compareAndAdd(insert_info{i, i+1, insertion_cost(v, my_device_tour[i], my_device_tour[i+1], instance)});
+      // O vizinho anterior a 'i'. Se 'i' for o primeiro cliente, o vizinho é o depósito
+      int node_prev_i = (i == 0) ? 0 : my_device_tour[r_ln->start_index + i - 1];
+
+      // O vizinho posterior a 'i'. Se 'i' for o último cliente, o vizinho é o depósito
+      int node_next_i = (i == r_ln->size) ? 0 : my_device_tour[r_ln->start_index + i ];
+
+      top3.compareAndAdd(insert_info{i + r_ln->start_index, node_prev_i, node_next_i, insertion_cost(client_v, node_prev_i, node_next_i, instance)});
     }
 
     return top3;
@@ -128,6 +137,67 @@ namespace
   /// @param v_insert Informações de destino de inserção do cliente v na rota R'
   /// @param u_insert Informações de destino de inserção do cliente u na rota R
   /// @param instance Instância sendo avaliada
+  void
+  complete_swap_star(BestSwap* best_swap, 
+                     int* mega_tour, 
+                     DeviceRoute* r, 
+                     DeviceRoute* r_ln, 
+                     DeviceInstance instance)
+  {
+    auto clients = instance.clients;
+    
+    int client_v = mega_tour[best_swap->v_tour_id];
+    int client_u = mega_tour[best_swap->u_tour_id];
+
+    r->total_demand = r->total_demand - clients[client_v].demand + clients[client_u].demand;
+
+    r_ln->total_demand = r_ln->total_demand - clients[client_u].demand + clients[client_v].demand;
+
+    
+    // Remove U da posição u_tour_id e insere V na posição v_tour_dest, atualizando a rota R'
+    
+    if (best_swap->v_tour_dest < best_swap->u_tour_id) {
+        // Inserção antes da remoção: desloca elementos para a direita
+      for (int i = best_swap->u_tour_id; i > best_swap->v_tour_dest; --i) {
+        mega_tour[i] = mega_tour[i-1];
+      }
+      mega_tour[best_swap->v_tour_dest] = client_v;
+    } 
+    else if (best_swap->v_tour_dest > best_swap->u_tour_id) {
+      // Inserção depois da remoção: desloca elementos para a esquerda. 
+      // O destino real recua 1 posição devido à lacuna deixada por U.
+      for (int i = best_swap->u_tour_id; i < best_swap->v_tour_dest - 1; ++i) {
+        mega_tour[i] = mega_tour[i+1];
+      }
+      mega_tour[best_swap->v_tour_dest - 1] = client_v;
+    } 
+    else {
+      // Substituição exata no mesmo índice
+      mega_tour[best_swap->u_tour_id] = client_v;
+    }
+
+    // Remove V da posição v_tour_id e insere U na posição u_tour_dest, atualizando a rota R
+    
+    if (best_swap->u_tour_dest < best_swap->v_tour_id) {
+      // Inserção antes da remoção: desloca elementos para a direita
+      for (int i = best_swap->v_tour_id; i > best_swap->u_tour_dest; --i) {
+        mega_tour[i] = mega_tour[i-1];
+      }
+      mega_tour[best_swap->u_tour_dest] = client_u;
+    } 
+    else if (best_swap->u_tour_dest > best_swap->v_tour_id) {
+      // Inserção depois da remoção: desloca elementos para a esquerda. 
+      // O destino real recua 1 posição devido à lacuna deixada por V.
+      for (int i = best_swap->v_tour_id; i < best_swap->u_tour_dest - 1; ++i) {
+        mega_tour[i] = mega_tour[i+1];
+      }
+      mega_tour[best_swap->u_tour_dest - 1] = client_u;
+    } 
+    else {
+      // Substituição exata no mesmo índice
+      mega_tour[best_swap->v_tour_id] = client_u;
+    }
+  }
 //   void 
 //   complete_swap_star(unsigned id_v, unsigned id_u, Route &r, Route &r_ln, insert_info v_insert, insert_info u_insert, Instance& instance)
 //   {
@@ -192,9 +262,11 @@ namespace
 void 
 apply_swap_star(std::vector<DeviceRoute>& routes, 
                 Instance& instance, 
-                int* my_device_tour, 
-                DeviceRoute* my_device_routes,
-                Top3Insertion* my_device_top3,
+                // int* my_device_tour, 
+                // DeviceRoute* my_device_routes,
+                // Top3Insertion* my_device_top3,
+                // BestSwap* my_best_swap,
+                ContextData my_ctx_data,
                 ExecutionContext& ctx)
 {
   auto& clients = instance.clients;
@@ -206,93 +278,133 @@ apply_swap_star(std::vector<DeviceRoute>& routes,
       if (!(routes[i].sector.overlap(routes[j].sector)))
         continue;
 
+      cvrp::sycl_engine::DeviceInstance d_instance = ctx.d_instance;
+
       ctx.q.submit([&] (sycl::handler& h){
 
-        DeviceRoute* local_route = my_device_routes + i;
+        DeviceRoute* source_route = my_ctx_data.my_device_routes + i;
+        DeviceRoute* target_route = my_ctx_data.my_device_routes + j;
 
         h.parallel_for(sycl::range(routes[i].size), [=](sycl::id<1> idx) {
 
           int id_v = idx[0];
 
-          int client_v = my_device_tour[local_route->start_index + id_v];
+          int client_v = my_ctx_data.my_device_tour[source_route->start_index + id_v];
           
-          my_device_top3[id_v] = findTop3Locations(client_v, my_device_tour, local_route, ctx.d_instance);
+          my_ctx_data.my_device_top3[id_v] = findTop3Locations(client_v, my_ctx_data.my_device_tour, target_route, d_instance);
         });
       });
 
       ctx.q.submit([&] (sycl::handler& h){
 
-        DeviceRoute* local_route = my_device_routes + j; 
+        DeviceRoute* source_route = my_ctx_data.my_device_routes + j;
+        DeviceRoute* target_route = my_ctx_data.my_device_routes + i;
 
-        int top3_start_id = (my_device_routes + i)->size; 
+        // Os top3 da rota r' estão deslocados até o tamanho da rota r
+        int top3_start_id = routes[i].size;
 
-        Top3Insertion* local_top3 = my_device_top3 + top3_start_id;
+        Top3Insertion* local_top3 = my_ctx_data.my_device_top3 + top3_start_id;
 
         h.parallel_for(sycl::range(routes[j].size), [=](sycl::id<1> idx) {
 
           int id_u = idx[0];
 
-          int client_u = my_device_tour[local_route->start_index + id_u];
+          int client_u = my_ctx_data.my_device_tour[source_route->start_index + id_u];
           
-          my_device_top3[id_u] = findTop3Locations(client_u, my_device_tour, local_route, ctx.d_instance);
+          local_top3[id_u] = findTop3Locations(client_u, my_ctx_data.my_device_tour, target_route, d_instance);
         });
       });
+      
+      BestSwap identity {cvrp::INF_F, -1, -1, -1, -1};
+
+      
+
+      ctx.q.memcpy(my_ctx_data.my_best_swap, &identity, sizeof(BestSwap)).wait();
 
       ctx.q.wait();
-      return;
-      // insert_info best_v;
-      // insert_info best_u;
 
-      // unsigned best_v_id, best_u_id;
+      DeviceRoute* r = my_ctx_data.my_device_routes + i;
+      DeviceRoute* r_ln = my_ctx_data.my_device_routes + j;
 
-      // for (unsigned id_v = 1; id_v < routes[i].size() - 1; ++id_v){
-      //   for (unsigned id_u = 1; id_u < routes[j].size() - 1; ++id_u){
+      ctx.q.submit([&] (sycl::handler& h){
+
+        int top3_r_ln_start_id = routes[i].size;;
+
+        Top3Insertion* r_ln_top3 = my_ctx_data.my_device_top3 + top3_r_ln_start_id;
+
+        auto reductor = sycl::reduction(my_ctx_data.my_best_swap, identity, FindBestSwap());
+
+        // loop paralelo na rota[i]
+        h.parallel_for(sycl::range(routes[i].size), reductor, [=](sycl::id<1> idx, auto& res_reducer) {
+
+          BestSwap local_best = identity;
+
+          int id_v = idx[0];
+          int client_v = my_ctx_data.my_device_tour[r->start_index + id_v];
+
+          for (int id_u = 0; id_u < r_ln->size; ++id_u){
+
+            int client_u = my_ctx_data.my_device_tour[r_ln->start_index + id_u];
+
+            if(r->total_demand - d_instance.clients[client_v].demand + d_instance.clients[client_u].demand > d_instance.capacity)
+              continue;
+
+            if(r_ln->total_demand - d_instance.clients[client_u].demand + d_instance.clients[client_v].demand > d_instance.capacity)
+              continue;
+
+            // Melhor inserção de v em r', desconsiderando U da rota r'
+
+            auto k = my_ctx_data.my_device_top3[id_v].get_best_insertion_except_client(client_u);
+
+            // Melhor inserção de u em r, fora inserção no mesmo lugar que o V e desconsiderando este da rota
+            auto k_ln = r_ln_top3[id_u].get_best_insertion_except_client(client_v);
+
+            int client_v_pred = (id_v == 0) ? 0 : my_ctx_data.my_device_tour[r->start_index + id_v - 1];
+            int client_v_suce = (id_v == r->size - 1) ? 0 : my_ctx_data.my_device_tour[r->start_index + id_v + 1];
+
+            int client_u_pred = (id_u == 0) ? 0 : my_ctx_data.my_device_tour[r_ln->start_index + id_u - 1];
+            int client_u_suce = (id_u == r_ln->size - 1) ? 0 : my_ctx_data.my_device_tour[r_ln->start_index + id_u + 1];
+
+            // Custo de inserção de V na exata posição de U
+            float swap_v_in_u = insertion_cost(client_v, client_u_pred, client_u_suce, d_instance);
+
+            // Melhor custo de inserção de V em r'
+            float v_to_r_ln = sycl::fmin(swap_v_in_u, k.cost) - insertion_cost(client_v, client_v_pred, client_v_suce, d_instance);
+
+            // Custo de inserção de U na exata posição de V
+            float swap_u_in_v = insertion_cost(client_u, client_v_pred, client_v_suce, d_instance);
             
-      //     unsigned v = routes[i][id_v], u = routes[j][id_u];
+            // Melhor custo de inserção de U em r
+            float u_to_r = sycl::fmin(swap_u_in_v, k_ln.cost)- insertion_cost(client_u, client_u_pred, client_u_suce, d_instance);
 
-      //     if(routes[i].total_demand - clients[v].demand + clients[u].demand > instance.capacity)
-      //       continue;
-          
-      //     if(routes[j].total_demand - clients[u].demand + clients[v].demand > instance.capacity)
-      //       continue;
-          
-      //     // Melhor inserção de v em r', fora inserção no mesmo lugar que o U e desconsiderando este da rota
+            // Atualizar a melhor troca encontrada
+            if (auto c = v_to_r_ln + u_to_r; c < local_best.total_cost) {
 
-      //     auto k = top3_insert_v[id_v].get_best_insertion_except_id(id_u);
+              local_best.total_cost = c;
+              
+              local_best.v_tour_id = r->start_index + id_v;
+              local_best.v_tour_dest = swap_v_in_u < k.cost ? r_ln->start_index + id_u : k.insert_index;
+              
+              local_best.u_tour_id = r_ln->start_index + id_u;
+              local_best.u_tour_dest = swap_u_in_v < k_ln.cost ? r->start_index + id_v : k_ln.insert_index;
+              
+            }
+          }
 
-      //     // Melhor inserção de u em r, fora inserção no mesmo lugar que o V e desconsiderando este da rota
+          // Redução do melhor valor encontrado
+          res_reducer.combine(local_best);
 
-      //     auto k_ln = top3_insert_u[id_u].get_best_insertion_except_id(id_v);
-
-      //     // Custo de inserção de V na exata posição de U
-      //     float swap_v_in_u = insertion_cost(routes[i][id_v], routes[j][id_u -1], routes[j][id_u+1], instance);
-
-      //     // Melhor custo de inserção de V em r'
-      //     float v_to_r_ln = std::min(swap_v_in_u, k.cost) - insertion_cost(routes[i][id_v], routes[i][id_v-1], routes[i][id_v+1], instance);
-
-      //     // Custo de inserção de U na exata posição de V
-      //     float swap_u_in_v = insertion_cost(routes[j][id_u], routes[i][id_v -1], routes[i][id_v+1], instance);
-          
-      //     // Melhor custo de inserção de U em r
-      //     float u_to_r = std::min(swap_u_in_v, k_ln.cost)- insertion_cost(routes[j][id_u], routes[j][id_u-1], routes[j][id_u+1], instance);
-
-      //     // Atualizar a melhor troca encontrada
-      //     if (auto c = v_to_r_ln + u_to_r; c < best_swap_cost) {
-
-      //       best_swap_cost = c;
-      //       best_v = swap_v_in_u < k.cost ? insert_info{id_u-1, id_u+1, swap_v_in_u} : k;
-      //       best_v_id = id_v;
-
-      //       best_u = swap_u_in_v < k_ln.cost ? insert_info{id_v-1, id_v+1, swap_u_in_v} : k_ln;
-      //       best_u_id = id_u;
+        });
+      }).wait();
+      
+      //A melhor troca que otimiza a solução, caso exista, é executada
+      ctx.q.single_task([=]() {
+    
+        if (my_ctx_data.my_best_swap->total_cost < 0) {
             
-      //     }
-      //   }
-      // }
-      // A melhor troca que otimiza a solução, caso exista, é executada
-      // if (best_swap_cost < 0) {
-      //   complete_swap_star(best_v_id, best_u_id, routes[i], routes[j], best_v, best_u, instance);
-      // }
+          complete_swap_star(my_ctx_data.my_best_swap, my_ctx_data.my_device_tour, r, r_ln, d_instance);
+        }
+      }).wait();
     }
   }
 }
