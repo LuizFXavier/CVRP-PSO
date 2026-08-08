@@ -6,6 +6,7 @@
 
 #include <app/command-line.hpp>
 #include <libcvrp/engine/io.hpp>
+#include <libcvrp/engine/local-search.hpp>
 #include <libpso/engine/pso-runner.hpp>
 
 int 
@@ -17,11 +18,15 @@ main(int argc, const char *argv[])
 
   instance.build_distance_matrix();
 
+  auto optimizer = [&](std::vector<int>& mega_tour, cvrp::Instance& instance, int particle_id) {
+    cvrp::local_search::optimize(mega_tour, instance);
+  }; 
+
   for (int i = 0; i < configIO.runs; ++i){
 
     auto start_time = std::chrono::high_resolution_clock::now();
 
-    auto best_particle = pso::run_pso(instance, hyperparameters);
+    auto best_particle = pso::run_pso(instance, hyperparameters, optimizer);
 
     auto end_time = std::chrono::high_resolution_clock::now();
 
@@ -30,7 +35,7 @@ main(int argc, const char *argv[])
     std::cout << best_particle.curr_of << "," << execution_time.count() << "\n";
 
     if (!configIO.output_dir.empty()){
-      std::string file_name = instance.name + std::string(".sol");
+      std::string file_name = instance.name + std::string("_") + std::to_string(i) + std::string(".sol");
     
       cvrp::io::save_routes(best_particle.curr_solution, instance, configIO.output_dir, file_name);
     }
