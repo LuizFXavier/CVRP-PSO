@@ -48,3 +48,15 @@ RUN mkdir -p /usr/lib/nvidia-cuda-toolkit/libdevice/
 RUN ln -s /usr/local/cuda/nvvm/libdevice/libdevice.10.bc /usr/lib/nvidia-cuda-toolkit/libdevice/libdevice.10.bc
 
 RUN apt install -y python3
+
+RUN apt install -y python3.12-venv
+
+COPY ./scripts/requirements.txt /tmp/requirements.txt
+
+RUN python3 -m venv /opt/venv
+
+RUN /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt
+
+WORKDIR /app/src
+
+CMD ["/bin/bash"]
