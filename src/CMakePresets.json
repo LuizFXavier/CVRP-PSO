@@ -56,7 +56,18 @@
 
         "CMAKE_CXX_SCAN_FOR_MODULES": "OFF"
       }
-    }
+    },
+    {
+      "name": "sycl-release",
+      "displayName": "SYCL com AdaptiveCpp (Otimizado/Release)",
+      "description": "Build otimizada para máximo desempenho em GPU",
+      "inherits": "sycl-dev",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_FLAGS_RELEASE": "-O3 -ffast-math",
+        "ACPP_TARGETS": "generic" 
+      }
+}
   ],
   "buildPresets": [
     {
@@ -84,6 +95,12 @@
       "configurePreset": "sycl-dev",
       "displayName": "SYCL com AdaptiveCpp",
       "description": "Build para desenvolvimento com o SYCL dentro de um ambiente configurado"
+    },
+    {
+      "name": "sycl-release",
+      "configurePreset": "sycl-release",
+      "displayName": "Build SYCL Release",
+      "description": "Compila o projeto com otimizações do AdaptiveCpp"
     }
   ]
 }

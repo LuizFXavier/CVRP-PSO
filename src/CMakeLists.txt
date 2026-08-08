@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD 23)
 
 add_subdirectory(libcvrp-core)
 add_subdirectory(libcvrp-engine)
-add_subdirectory(libcvrp-sycl)
+# add_subdirectory(libcvrp-sycl)
 
 add_subdirectory(libpso-core)
 add_subdirectory(libpso-engine)
