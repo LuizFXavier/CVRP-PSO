@@ -2,10 +2,18 @@
 
 echo "⚙️ Initializing CMake..."
 cmake --preset=sycl-dev -DACPP_TARGETS=generic &&
-cmake --build  --preset=sycl-dev &&
+cmake --build --preset=sycl-dev &&
+ctest --output-on-failure --test-dir /app/src/build/sycl-dev &&
       /app/src/build/sycl-dev/app/cvrp-pso \
       --in ${TEST_INPUT_DATASET} \
       --out /app/output/ \
+      --runs ${TEST_NUM_RUNS} \
+      --iterations ${TEST_ITERATIONS} \
+      --swarm ${TEST_SWARM_SIZE} \
+      --elite ${TEST_ELITE_SIZE} && 
+      /app/src/build/sycl-dev/app/sycl-cvrp \
+      --in ${TEST_INPUT_DATASET} \
+      --out /app/output/sycl/ \
       --runs ${TEST_NUM_RUNS} \
       --iterations ${TEST_ITERATIONS} \
       --swarm ${TEST_SWARM_SIZE} \
@@ -18,9 +26,17 @@ echo "🔭 Watching for changes on /app/src..."
 while inotifywait -q -r -e modify,create,delete /app/src --exclude 'nohup.out|output|run.py|build|out'; do
   echo "🔄 Change detected! Recompiling..."
   cmake --build --preset=sycl-dev &&
+  ctest --output-on-failure --test-dir /app/src/build/sycl-dev &&
       /app/src/build/sycl-dev/app/cvrp-pso \
       --in ${TEST_INPUT_DATASET} \
       --out /app/output/ \
+      --runs ${TEST_NUM_RUNS} \
+      --iterations ${TEST_ITERATIONS} \
+      --swarm ${TEST_SWARM_SIZE} \
+      --elite ${TEST_ELITE_SIZE} && 
+      /app/src/build/sycl-dev/app/sycl-cvrp \
+      --in ${TEST_INPUT_DATASET} \
+      --out /app/output/sycl/ \
       --runs ${TEST_NUM_RUNS} \
       --iterations ${TEST_ITERATIONS} \
       --swarm ${TEST_SWARM_SIZE} \
