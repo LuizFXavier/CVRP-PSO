@@ -13,7 +13,7 @@ namespace pso
 {
 
 Particle 
-run_pso(cvrp::Instance &instance, Hyperparameters hyperparameters)
+run_pso(cvrp::Instance &instance, Hyperparameters hyperparameters, OptimizerFunc optimizer)
 {
   // Verificação de erros
   {
@@ -94,7 +94,7 @@ run_pso(cvrp::Instance &instance, Hyperparameters hyperparameters)
     // Execução dos mecanismos de busca local nas partículas pertencentes à elite
     #pragma omp parallel for
     for (int e = 0; e < elite.size(); ++e){
-      cvrp::local_search::optimize(elite[e]->curr_solution, instance);
+      optimizer(elite[e]->curr_solution, instance, e);
 
       elite[e]->curr_of = fitness(*(elite[e]), instance);
     }

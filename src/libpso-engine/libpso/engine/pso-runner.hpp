@@ -1,10 +1,13 @@
 #pragma once
 
+#include <functional>
+
 #include <libcvrp/core/Instance.hpp>
 #include <libpso/core/Hyperparameters.hpp>
 #include <libpso/core/Particle.hpp>
 
 namespace pso
 {
-  Particle run_pso(cvrp::Instance& instance, Hyperparameters hyperparameters);
+  using OptimizerFunc = std::function<void(std::vector<int>& /* tour */, cvrp::Instance& /*instance */, int /* particle_id */)>;
+  Particle run_pso(cvrp::Instance& instance, Hyperparameters hyperparameters, OptimizerFunc optimizer);
 } // namespace pso

@@ -4,6 +4,7 @@
 #include <libpso/engine/pso-runner.hpp>
 
 #include <libcvrp/core/Instance.hpp>
+#include <libcvrp/engine/local-search.hpp>
 
 using namespace std;
 
@@ -12,6 +13,10 @@ cvrp::Instance create_simple_instance();
 bool test_trivial_instance();
 bool test_zero_iterations();
 bool test_reproducible();
+
+auto optimizer = [](std::vector<int>& mega_tour, cvrp::Instance& instance, int particle_id) {
+  cvrp::local_search::optimize(mega_tour, instance);
+};
 
 int 
 main() 
@@ -64,7 +69,7 @@ test_trivial_instance()
   pso::Particle best;
   try
   {
-    best = pso::run_pso(inst, hp);
+    best = pso::run_pso(inst, hp, optimizer);
   }
   catch(const std::exception& e)
   {
@@ -85,7 +90,7 @@ test_zero_iterations()
   hp.iterations = 0; // O loop não deve correr
 
   // Uma partícula não nula deve ser devolvida pelo PSO
-  pso::Particle best = pso::run_pso(inst, hp);
+  pso::Particle best = pso::run_pso(inst, hp, optimizer);
 
   return true; 
 }
@@ -101,11 +106,11 @@ test_reproducible() {
 
   // Primeira execução
   srand(42); 
-  pso::Particle best1 = pso::run_pso(inst, hp);
+  pso::Particle best1 = pso::run_pso(inst, hp, optimizer);
 
   // Segunda execução com a mesma semente
   srand(42);
-  pso::Particle best2 = pso::run_pso(inst, hp);
+  pso::Particle best2 = pso::run_pso(inst, hp, optimizer);
 
   return best1.curr_of == best2.curr_of;
 }
