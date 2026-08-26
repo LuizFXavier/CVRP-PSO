@@ -12,6 +12,7 @@ struct Instance
   std::string name{};
   unsigned int dimension{};
   unsigned int capacity{};
+  unsigned int minimum_routes{};
   
   std::vector<cvrp::Client> clients{};
 

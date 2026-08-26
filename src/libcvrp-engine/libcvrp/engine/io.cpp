@@ -99,6 +99,17 @@ read_instance(std::string instance_path)
 				32768. * atan2(clients[i].y - clients[0].y, clients[i].x - clients[0].x) / PI);
     }
   }
+
+  // Cálculo do número mínimo de rotas necessárias
+
+  {
+    unsigned int total_demand = 0;
+
+    for (int i = 1; i < instance.clients.size(); ++i)
+      total_demand += instance.clients[i].demand;
+
+    instance.minimum_routes = std::ceil(total_demand / instance.capacity);
+  }
   
   return instance;
     
