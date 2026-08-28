@@ -84,6 +84,7 @@ test_swap_star(){
   cvrp::Instance inst;
   inst.dimension = 7; // 1 Depósito e 5 Clientes
   inst.capacity = 10;
+  inst.minimum_routes = 2; 
   
   // Depósito A na origem (0,0)
   inst.clients.push_back({0.0f, 0.0f, 0});
@@ -108,7 +109,7 @@ test_swap_star(){
 
   inst.build_distance_matrix();
 
-  cvrp::sycl_engine::ExecutionContext ctx(1, inst.clients.size());
+  cvrp::sycl_engine::ExecutionContext ctx;
 
   ctx.load_instance(inst);
 
@@ -124,9 +125,9 @@ test_swap_star(){
 
   std::vector<cvrp::sycl_engine::DeviceRoute> routes = {route1, route2};
 
-  int* my_device_tour = ctx.d_swarm_mega_tours;
-  cvrp::sycl_engine::DeviceRoute* my_device_routes = ctx.d_swarm_routes;
-  cvrp::sycl_engine::Top3Insertion* my_device_top3 = ctx.d_swarm_top3;
+  int* my_device_tour = ctx.d_mega_tour;
+  cvrp::sycl_engine::DeviceRoute* my_device_routes = ctx.d_routes;
+  cvrp::sycl_engine::Top3Insertion* my_device_top3 = ctx.d_top3_matrix;
   cvrp::sycl_engine::BestSwap* my_best_swap = ctx.d_best_swap;
 
   ctx.q.memcpy(my_device_tour, mega_tour.data(), mega_tour.size() * sizeof(int)).wait();
@@ -144,7 +145,7 @@ test_swap_star(){
     if (comparison[i] != mega_tour[i])
       throw std::runtime_error(std::format("Error: Swap star failed on first route! Expected {}, but got {}", vector_to_string(comparison), vector_to_string(mega_tour)));
   }
-
+ 
 }
 
 void 
@@ -153,6 +154,7 @@ test_route_circle_sector()
   cvrp::Instance inst;
   inst.dimension = 4; // 1 Depósito e 3 Clientes
   inst.capacity = 3;
+  inst.minimum_routes = 2;
   
   // Depósito na origem (0,0)
   inst.clients.push_back({0.0f, 0.0f, 0});

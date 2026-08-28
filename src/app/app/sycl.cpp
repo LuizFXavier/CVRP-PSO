@@ -18,7 +18,7 @@ main(int argc, const char *argv[])
   instance.build_distance_matrix();
 
   int simultaneous_particles = hyperparameters.swarm_size; 
-  cvrp::sycl_engine::ExecutionContext ctx(simultaneous_particles, instance.clients.size());
+  cvrp::sycl_engine::ExecutionContext ctx;
   ctx.load_instance(instance);
 
   // Cria a função injetável usando lambda tendo acesso às variáveis 'instance' e 'ctx' da main
