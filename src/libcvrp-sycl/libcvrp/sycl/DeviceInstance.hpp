@@ -6,8 +6,9 @@ namespace cvrp::sycl_engine
 {
 
 struct DeviceInstance {
-  unsigned int dimension;
-  unsigned int capacity;
+  unsigned int dimension{};
+  unsigned int capacity{};
+  unsigned int minimum_routes{};
   cvrp::Client* clients;         // Ponteiro para memória USM Device
   float* distance_matrix;        // Ponteiro para memória USM Device
   

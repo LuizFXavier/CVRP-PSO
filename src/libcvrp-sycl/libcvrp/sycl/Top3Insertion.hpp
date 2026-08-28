@@ -20,6 +20,8 @@ struct BestSwap
   int u_tour_id;
   int v_tour_dest;
   int u_tour_dest;
+  int r_i;
+  int r_j;
   // int best_v_id;
   // int best_u_id;
   // insert_info best_v;
