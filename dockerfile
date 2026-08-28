@@ -57,6 +57,10 @@ RUN python3 -m venv /opt/venv
 
 RUN /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt
 
+RUN apt-get update
+
+RUN apt install -y gdb
+
 WORKDIR /app/src
 
 CMD ["/bin/bash"]
