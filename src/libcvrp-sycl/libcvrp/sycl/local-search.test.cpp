@@ -83,7 +83,7 @@ void
 test_swap_star(){
   cvrp::Instance inst;
   inst.dimension = 7; // 1 Depósito e 5 Clientes
-  inst.capacity = 10;
+  inst.capacity = 6;
   inst.minimum_routes = 2; 
   
   // Depósito A na origem (0,0)
@@ -122,6 +122,12 @@ test_swap_star(){
 
   route1.start_index = 1;
   route2.start_index = 4;
+
+  // route1.sector.start = 0;
+  // route1.sector.end = 10;
+
+  // route1.sector.start = 5;
+  // route1.sector.end = 30;
 
   std::vector<cvrp::sycl_engine::DeviceRoute> routes = {route1, route2};
 
