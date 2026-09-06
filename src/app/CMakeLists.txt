@@ -14,22 +14,22 @@ target_link_libraries(cvrp-pso
   libpso-engine
 )
 
-# add_executable(sycl-cvrp)
+add_executable(sycl-cvrp)
 
-# target_sources(sycl-cvrp
-#   PRIVATE
-#   app/command-line.cpp 
-#   app/sycl.cpp
-# )
+target_sources(sycl-cvrp
+  PRIVATE
+  app/command-line.cpp 
+  app/sycl.cpp
+)
 
-# target_include_directories(sycl-cvrp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_include_directories(sycl-cvrp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
-# target_link_libraries(sycl-cvrp
-#   PUBLIC
-#   libcvrp-engine
-#   libpso-engine
-#   libcvrp-sycl
-# )
+target_link_libraries(sycl-cvrp
+  PUBLIC
+  libcvrp-engine
+  libpso-engine
+  libcvrp-sycl
+)
 
 if(BUILD_TESTING)
     # Procura todos os ficheiros de teste na pasta
