@@ -9,6 +9,7 @@ target_sources(libcvrp-sycl
   PRIVATE
   libcvrp/sycl/local-search.cpp
   libcvrp/sycl/splitter.cpp
+  libcvrp/sycl/ExecutionContext.cpp
 )
 
 target_link_libraries(libcvrp-sycl

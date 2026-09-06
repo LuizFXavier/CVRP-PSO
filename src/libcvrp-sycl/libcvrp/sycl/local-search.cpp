@@ -1,5 +1,8 @@
 #include <sycl/sycl.hpp>
 #include <algorithm>
+#include <stdexcept>
+#include <iostream>
+#include <format>
 
 #include <libcvrp/sycl/local-search.hpp>
 
@@ -7,6 +10,7 @@
 #include <libcvrp/sycl/splitter.hpp>
 #include <libcvrp/sycl/ExecutionContext.hpp>
 #include <libcvrp/sycl/Top3Insertion.hpp>
+#include <libcvrp/sycl/RoutePair.hpp>
 
 namespace cvrp::sycl_engine::local_search
 {
@@ -215,29 +219,48 @@ apply_swap_star(std::vector<DeviceRoute>& routes,
 
   cvrp::sycl_engine::DeviceInstance d_instance = ctx.d_instance;
 
+  cvrp::sycl_engine::RoutePair* d_route_pairs = ctx.d_route_pairs;
+
   unsigned int instance_dimension = d_instance.dimension;
 
   int matrix_line_size = instance_dimension * ctx.max_routes;
 
+  int total_route_combs = (routes.size() * (routes.size() - 1)) / 2;
 
-  auto ev_main = ctx.q.submit([&] (sycl::handler& h){
+  // std::vector<cvrp::sycl_engine::RoutePair> valid_pairs;
+  // valid_pairs.reserve((routes.size() * (routes.size() - 1)) / 2);
+  
+  // for (int i = 0; i < routes.size() - 1; ++i) {
+  //   for (int j = i + 1; j < routes.size(); ++j) {
+      
+  //     valid_pairs.push_back({i, j});
+  //     if (routes[i].sector.overlap(routes[j].sector)) {
+  //     }
+  //   }
+  // }
+
+  // if (valid_pairs.empty()) return;
+
+  // // throw std::runtime_error(std::to_string(valid_pairs.size()));
+  
+  // // Aloca dinamicamente apenas o tamanho necessário na VRAM e copia
+  // cvrp::sycl_engine::RoutePair* d_valid_pairs = sycl::malloc_device<cvrp::sycl_engine::RoutePair>(valid_pairs.size(), ctx.q);
+  // ctx.q.memcpy(d_valid_pairs, valid_pairs.data(), valid_pairs.size() * sizeof(cvrp::sycl_engine::RoutePair)).wait();
+
+  auto ev_main = ctx.q.submit([&] (sycl::handler & h){
 
     auto reductor = sycl::reduction(my_ctx_data.my_best_swap, identity, FindBestSwap());
 
-    h.parallel_for(sycl::range<2>(routes.size(), routes.size()), reductor, [=](sycl::id<2> idx, auto& res_reducer) {
+    h.parallel_for(sycl::range<1>(total_route_combs), reductor, [=](sycl::id<1> idx, auto& res_reducer){
 
-      
-      int r_i = idx[0];
-      int r_j = idx[1];
-      
+      int r_i = d_route_pairs[idx].first;
+      int r_j = d_route_pairs[idx].second;
+
       BestSwap local_best = identity;
 
       local_best.r_i = r_i;
       local_best.r_j = r_j;
 
-      // Evita avaliar a mesma rota ou processar o par espelhado duas vezes
-      if (r_i >= r_j) return;
-      
       // Pula rotas que não intersectam os setores circulares
       if (!(my_device_routes[r_i].sector.overlap(my_device_routes[r_j].sector))) return;
 
@@ -331,9 +354,124 @@ apply_swap_star(std::vector<DeviceRoute>& routes,
         }
       }
       res_reducer.combine(local_best);
-        
     });
   });
+
+
+  // auto ev_main = ctx.q.submit([&] (sycl::handler& h){
+
+  //   auto reductor = sycl::reduction(my_ctx_data.my_best_swap, identity, FindBestSwap());
+
+  //   h.parallel_for(sycl::range<2>(routes.size(), routes.size()), reductor, [=](sycl::id<2> idx, auto& res_reducer) {
+
+      
+  //     int r_i = idx[0];
+  //     int r_j = idx[1];
+      
+  //     BestSwap local_best = identity;
+
+  //     local_best.r_i = r_i;
+  //     local_best.r_j = r_j;
+
+  //     // Evita avaliar a mesma rota ou processar o par espelhado duas vezes
+  //     if (r_i >= r_j) return;
+      
+  //     // Pula rotas que não intersectam os setores circulares
+  //     if (!(my_device_routes[r_i].sector.overlap(my_device_routes[r_j].sector))) return;
+
+  //     int id_j = r_j * instance_dimension;
+
+  //     DeviceRoute* r = my_device_routes + r_i;
+  //     DeviceRoute* r_ln = my_device_routes + r_j;
+
+  //     // Top3 inserções de v em r'
+  //     for (int id_v = 0; id_v < my_device_routes[r_i].size; ++id_v){
+
+  //       int matrix_index = (r_i * matrix_line_size) + id_j + id_v;
+
+  //       int client_v = my_device_tour[my_device_routes[r_i].start_index + id_v];
+
+  //       my_device_top3_matrix[matrix_index] = findTop3Locations(client_v, 
+  //                                                               my_device_tour,
+  //                                                               r_ln,
+  //                                                               d_instance);
+  //     }
+
+  //     int start_j_top3 = my_device_routes[r_i].size;
+
+  //     // Top3 inserções de u em r
+  //     for (int id_u = 0; id_u < my_device_routes[r_j].size; ++id_u){
+
+  //       int matrix_index = (r_i * matrix_line_size) + id_j + start_j_top3 + id_u;
+
+  //       int client_v = my_device_tour[my_device_routes[r_j].start_index + id_u];
+
+  //       my_device_top3_matrix[matrix_index] = findTop3Locations(client_v, 
+  //                                                               my_device_tour,
+  //                                                               r,
+  //                                                               d_instance);
+  //     }
+
+  //     for (int id_v = 0; id_v < my_device_routes[r_i].size; ++ id_v){
+
+  //       int client_v = my_device_tour[r->start_index + id_v];
+
+  //       for (int id_u = 0; id_u < my_device_routes[r_j].size; ++ id_u){
+
+  //         int client_u = my_device_tour[r_ln->start_index + id_u];
+          
+  //         if(r->total_demand - d_instance.clients[client_v].demand + d_instance.clients[client_u].demand > d_instance.capacity)
+  //           continue;
+
+  //         if(r_ln->total_demand - d_instance.clients[client_u].demand + d_instance.clients[client_v].demand > d_instance.capacity)
+  //           continue;
+
+  //         int matrix_index_v = (r_i * matrix_line_size) + id_j + id_v;
+  //         int matrix_index_u = (r_i * matrix_line_size) + id_j + start_j_top3 + id_u;
+
+  //         // Melhor inserção de v em r', desconsiderando U da rota r'
+
+  //         auto k = my_device_top3_matrix[matrix_index_v].get_best_insertion_except_client(client_u);
+
+  //         // Melhor inserção de u em r, fora inserção no mesmo lugar que o V e desconsiderando este da rota
+  //         auto k_ln = my_device_top3_matrix[matrix_index_u].get_best_insertion_except_client(client_v);
+
+  //         int client_v_pred = (id_v == 0) ? 0 : my_device_tour[r->start_index + id_v - 1];
+  //         int client_v_suce = (id_v == r->size - 1) ? 0 : my_device_tour[r->start_index + id_v + 1];
+
+  //         int client_u_pred = (id_u == 0) ? 0 : my_device_tour[r_ln->start_index + id_u - 1];
+  //         int client_u_suce = (id_u == r_ln->size - 1) ? 0 : my_device_tour[r_ln->start_index + id_u + 1];
+
+  //         // Custo de inserção de V na exata posição de U
+  //         float swap_v_in_u = insertion_cost(client_v, client_u_pred, client_u_suce, d_instance);
+
+  //         // Melhor custo de inserção de V em r'
+  //         float v_to_r_ln = sycl::fmin(swap_v_in_u, k.cost) - insertion_cost(client_v, client_v_pred, client_v_suce, d_instance);
+
+  //         // Custo de inserção de U na exata posição de V
+  //         float swap_u_in_v = insertion_cost(client_u, client_v_pred, client_v_suce, d_instance);
+          
+  //         // Melhor custo de inserção de U em r
+  //         float u_to_r = sycl::fmin(swap_u_in_v, k_ln.cost)- insertion_cost(client_u, client_u_pred, client_u_suce, d_instance);
+
+  //         // Atualizar a melhor troca encontrada
+  //         if (auto c = v_to_r_ln + u_to_r; c < local_best.total_cost) {
+
+  //           local_best.total_cost = c;
+            
+  //           local_best.v_tour_id = r->start_index + id_v;
+  //           local_best.v_tour_dest = swap_v_in_u < k.cost ? r_ln->start_index + id_u : k.insert_index;
+            
+  //           local_best.u_tour_id = r_ln->start_index + id_u;
+  //           local_best.u_tour_dest = swap_u_in_v < k_ln.cost ? r->start_index + id_v : k_ln.insert_index;
+            
+  //         }
+  //       }
+  //     }
+  //     res_reducer.combine(local_best);
+        
+  //   });
+  // });
 
   ctx.q.submit([&] (sycl::handler& h){ 
 
@@ -349,5 +487,27 @@ apply_swap_star(std::vector<DeviceRoute>& routes,
   });
 
   ctx.q.wait();
+
+  BestSwap host_best_swap;
+
+// 2. Faz a cópia da VRAM (Device) para a RAM (Host) e aguarda a conclusão
+// ctx.q.memcpy(&host_best_swap, my_ctx_data.my_best_swap, sizeof(BestSwap)).wait();
+
+//   throw std::runtime_error(std::format(
+//     "\n=== DEBUG EXCEPTION: MELHOR SWAP ENCONTRADO ===\n"
+//     "Custo Total (Delta): {}\n"
+//     "Rota origem de V (r_i): {}\n"
+//     "Rota origem de U (r_j): {}\n"
+//     "Cliente V - Índice Atual: {} | Índice Destino: {}\n"
+//     "Cliente U - Índice Atual: {} | Índice Destino: {}\n"
+//     "===============================================\n",
+//     host_best_swap.total_cost,
+//     host_best_swap.r_i,
+//     host_best_swap.r_j,
+//     host_best_swap.v_tour_id, host_best_swap.v_tour_dest,
+//     host_best_swap.u_tour_id, host_best_swap.u_tour_dest
+// ));
+
+  // sycl::free(d_valid_pairs, ctx.q);
 }
 } // namespace cvrp::sycl

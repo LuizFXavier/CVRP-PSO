@@ -6,6 +6,7 @@
 #include <libcvrp/sycl/DeviceInstance.hpp>
 #include <libcvrp/sycl/DeviceRoute.hpp>
 #include <libcvrp/sycl/Top3Insertion.hpp>
+#include <libcvrp/sycl/RoutePair.hpp>
 
 namespace cvrp::sycl_engine {
 
@@ -33,6 +34,8 @@ public:
   Top3Insertion* d_top3_matrix;
 
   BestSwap* d_best_swap;
+
+  RoutePair* d_route_pairs;
 
   int max_clients_per_tour;
   
@@ -74,8 +77,16 @@ public:
 
     d_best_swap = sycl::malloc_device<BestSwap>(d_instance.dimension, q);
 
+    int max_route_combs = (max_routes * (max_routes - 1)) / 2;
+
+    d_route_pairs = sycl::malloc_device<RoutePair>(max_route_combs, q);
+
+    setup_route_combs(d_instance.minimum_routes, max_routes); 
+
     q.wait();
   }
+
+  void setup_route_combs(int minimum_routes, int max_routes);
   
   // Destrutor limpa a memória da GPU
   ~ExecutionContext() 
@@ -88,6 +99,8 @@ public:
     if (d_top3_matrix) sycl::free(d_top3_matrix, q);
 
     if (d_best_swap) sycl::free(d_best_swap, q);
+
+    if (d_route_pairs) sycl::free(d_route_pairs, q);
   }
 };
 }
