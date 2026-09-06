@@ -6,7 +6,7 @@ from openpyxl import load_workbook, Workbook
 from sys import argv
 from leitor_instancia import ler_instancia
 
-NUM_TESTES = 5
+NUM_TESTES = 30
 instance = ""
 
 arquivos_teste = []
@@ -22,7 +22,7 @@ elif argv[1].upper() == "-D":
 else:
     raise Exception("Não se sabe se é arquivo ou diretório!")
 
-caminho_output = "./PSO_data_map_to_vector.xlsx"
+caminho_output = "../output/PSO_data_30_runs_openMP.xlsx"
 
 if len(argv) == 4:
     caminho_output = argv[3]
@@ -58,14 +58,14 @@ count = 1
 
 EXECUTAVEL = os.path.expanduser("~/Projects/lscad/CVRP-PSO/src/build/default/app/cvrp-pso")
 
-for caso_teste in arquivos_teste:
-    print(caso_teste)
-    if caso_teste[-3:] != "vrp":
-        continue
+for num_threads in NUM_THREADS:
+  for caso_teste in arquivos_teste:
+      print(caso_teste)
+      if caso_teste[-3:] != "vrp":
+          continue
 
-    instancia = ler_instancia(caminho + caso_teste)
-
-    for num_threads in NUM_THREADS:
+      instancia = ler_instancia(caminho + caso_teste)
+    
       for c in range(len(nRepeticoes[:1])):
           
           print(caso_teste.split("/")[-1], ", threads:", num_threads, ", ", c)
@@ -73,6 +73,7 @@ for caso_teste in arquivos_teste:
           comando = [
               EXECUTAVEL,
               "--in", caminho + caso_teste,
+              "--out", "../output/",
               "--swarm", str(nParticulas[c]),
               "--iter", str(nRepeticoes[c]),
               "--elite", str(nElite[c]),
@@ -121,6 +122,7 @@ for caso_teste in arquivos_teste:
       ws.append(["Partículas:"] + nParticulas)
       ws.append(["Repetições:"] + nRepeticoes)
       ws.append(["Elite:"] + nElite)
+      ws.append([])
       ws.append([])
 
       for i in range(0, len(dados)):
