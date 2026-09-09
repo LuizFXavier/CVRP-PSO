@@ -22,8 +22,8 @@ main(int argc, const char *argv[])
   ctx.load_instance(instance);
 
   // Cria a função injetável usando lambda tendo acesso às variáveis 'instance' e 'ctx' da main
-  auto sycl_optimizer = [&](std::vector<int>& tour, cvrp::Instance& instance, int particle_id) {
-      cvrp::sycl_engine::local_search::optimize(tour, instance, particle_id, ctx);
+  auto sycl_optimizer = [&](std::vector<std::vector<int>*> tours, cvrp::Instance& instance, int particle_id) {
+      cvrp::sycl_engine::local_search::optimize(tours, instance, particle_id, ctx);
   };
 
   for (int i = 0; i < configIO.runs; ++i){
