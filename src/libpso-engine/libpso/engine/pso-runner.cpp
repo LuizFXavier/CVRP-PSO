@@ -92,11 +92,20 @@ run_pso(cvrp::Instance &instance, Hyperparameters hyperparameters, OptimizerFunc
     }
 
     // Execução dos mecanismos de busca local nas partículas pertencentes à elite
-    #pragma omp parallel for
-    for (int e = 0; e < elite.size(); ++e){
-      optimizer(elite[e]->curr_solution, instance, e);
-
-      elite[e]->curr_of = fitness(*(elite[e]), instance);
+    // #pragma omp parallel for
+    for (int e = 0; e < elite.size(); e += 2){
+      
+      // Se houver uma partícula ímpar sobrando no final
+      if (e + 1 >= elite.size()) {
+          // Passa a mesma partícula duas vezes (a GPU processará normalmente)
+          optimizer({&(elite[e]->curr_solution), &(elite[e]->curr_solution)}, instance, e);
+          elite[e]->curr_of = fitness(*(elite[e]), instance);
+      } else {
+          // Comportamento normal para o par
+          optimizer({&(elite[e]->curr_solution), &(elite[e+1]->curr_solution)}, instance, e);
+          elite[e]->curr_of = fitness(*(elite[e]), instance);
+          elite[e+1]->curr_of = fitness(*(elite[e+1]), instance);
+      }
     }
 
     // Iteração para atualização de p_best e g_best

@@ -38,6 +38,8 @@ public:
   
   int max_routes;
 
+  int simultaneous_proc = 2;
+
   ExecutionContext()
   : q(sycl::default_selector_v) {}
 
@@ -66,13 +68,13 @@ public:
 
     max_clients_per_tour = instance.dimension + 1;
 
-    d_mega_tour = sycl::malloc_device<int>(max_clients_per_tour, q);
+    d_mega_tour = sycl::malloc_device<int>(max_clients_per_tour * simultaneous_proc, q);
     
-    d_routes = sycl::malloc_device<DeviceRoute>(max_routes, q);
+    d_routes = sycl::malloc_device<DeviceRoute>(max_routes * simultaneous_proc, q);
     
     d_top3_matrix = sycl::malloc_device<Top3Insertion>(max_routes * (max_routes * d_instance.dimension), q);
 
-    d_best_swap = sycl::malloc_device<BestSwap>(d_instance.dimension, q);
+    d_best_swap = sycl::malloc_device<BestSwap>(simultaneous_proc, q);
 
     q.wait();
   }

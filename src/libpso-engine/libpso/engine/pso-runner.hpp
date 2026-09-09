@@ -8,6 +8,6 @@
 
 namespace pso
 {
-  using OptimizerFunc = std::function<void(std::vector<int>& /* tour */, cvrp::Instance& /*instance */, int /* particle_id */)>;
+  using OptimizerFunc = std::function<void(std::vector<std::vector<int>*> /* tours */, cvrp::Instance& /*instance */, int /* particle_id */)>;
   Particle run_pso(cvrp::Instance& instance, Hyperparameters hyperparameters, OptimizerFunc optimizer);
 } // namespace pso
