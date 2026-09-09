@@ -114,6 +114,7 @@ test_swap_star(){
   ctx.load_instance(inst);
 
   std::vector<int> mega_tour = {0, 1, 4, 5, 6, 2, 3, 0};
+  std::vector<int> mega_tour_b = {0, 1, 4, 5, 6, 2, 3, 0};
 
   cvrp::sycl_engine::DeviceRoute route1, route2;
 
@@ -125,6 +126,8 @@ test_swap_star(){
 
   std::vector<cvrp::sycl_engine::DeviceRoute> routes = {route1, route2};
 
+  std::vector<cvrp::sycl_engine::DeviceRoute> routes_b = {route1, route2};
+
   int* my_device_tour = ctx.d_mega_tour;
   cvrp::sycl_engine::DeviceRoute* my_device_routes = ctx.d_routes;
   cvrp::sycl_engine::Top3Insertion* my_device_top3 = ctx.d_top3_matrix;
@@ -133,17 +136,27 @@ test_swap_star(){
   ctx.q.memcpy(my_device_tour, mega_tour.data(), mega_tour.size() * sizeof(int)).wait();
   ctx.q.memcpy(my_device_routes, routes.data(), routes.size() * sizeof(cvrp::sycl_engine::DeviceRoute)).wait();
 
-  cvrp::sycl_engine::local_search::apply_swap_star(routes, inst, cvrp::sycl_engine::ContextData{my_device_tour, my_device_routes, my_device_top3, my_best_swap}, ctx);
+  ctx.q.memcpy(my_device_tour + ctx.max_clients_per_tour, mega_tour_b.data(), mega_tour_b.size() * sizeof(int)).wait();
+  ctx.q.memcpy(my_device_routes + ctx.max_routes, routes_b.data(), routes_b.size() * sizeof(cvrp::sycl_engine::DeviceRoute)).wait();
+
+  std::vector<cvrp::sycl_engine::DeviceRoute> v_routes[2] = {routes, routes_b};
+
+  cvrp::sycl_engine::local_search::apply_swap_star(v_routes, inst, cvrp::sycl_engine::ContextData{my_device_tour, my_device_routes, my_device_top3, my_best_swap}, ctx);
 
   std::vector<int> comparison = {0, 1, 4, 6, 5, 2, 3, 0};
 
   ctx.q.memcpy(mega_tour.data(), my_device_tour, mega_tour.size() * sizeof(int)).wait();
+
+  ctx.q.memcpy(mega_tour_b.data(), my_device_tour + ctx.max_clients_per_tour, mega_tour.size() * sizeof(int)).wait();
   
 
   for (int i = 0; i < comparison.size(); ++i){
 
     if (comparison[i] != mega_tour[i])
       throw std::runtime_error(std::format("Error: Swap star failed on first route! Expected {}, but got {}", vector_to_string(comparison), vector_to_string(mega_tour)));
+
+    if (comparison[i] != mega_tour_b[i])
+      throw std::runtime_error(std::format("Error: Swap star failed on tour b! Expected {}, but got {}", vector_to_string(comparison), vector_to_string(mega_tour_b)));
   }
  
 }
