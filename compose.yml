@@ -23,7 +23,7 @@ services:
       - TEST_NUM_RUNS=1
       - TEST_ITERATIONS=5
       - TEST_SWARM_SIZE=10
-      - TEST_ELITE_SIZE=1
+      - TEST_ELITE_SIZE=2
       - HOST_OUTPUT_DIR=./output
 
     volumes:
