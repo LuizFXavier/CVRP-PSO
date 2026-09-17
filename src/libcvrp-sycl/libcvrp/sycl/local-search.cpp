@@ -29,7 +29,7 @@ optimize(std::vector<std::vector<int>*> mega_tours, Instance& instance, int star
   int* my_device_tour = ctx.d_mega_tour;
   DeviceRoute* my_device_routes = ctx.d_routes;
   Top3Insertion* my_device_top3_vector = ctx.d_top3_vector;
-  BestSwap* my_best_swap = ctx.d_best_swap;
+  DualBestSwap* my_dual_best_swap = ctx.d_dual_best_swap;
 
   ctx.q.memcpy(my_device_tour, mega_tours[0]->data(), mega_tours[0]->size() * sizeof(int)).wait();
   ctx.q.memcpy(my_device_routes, routes_set[0].data(), routes_set[0].size() * sizeof(DeviceRoute)).wait();
@@ -37,7 +37,7 @@ optimize(std::vector<std::vector<int>*> mega_tours, Instance& instance, int star
   ctx.q.memcpy(my_device_tour + ctx.max_clients_per_tour, mega_tours[1]->data(), mega_tours[1]->size() * sizeof(int)).wait();
   ctx.q.memcpy(my_device_routes + ctx.max_routes, routes_set[1].data(), routes_set[1].size() * sizeof(DeviceRoute)).wait();
 
-  apply_swap_star(routes_set, instance, ContextData{my_device_tour, my_device_routes, my_device_top3_vector, my_best_swap}, ctx);
+  apply_swap_star(routes_set, instance, ContextData{my_device_tour, my_device_routes, my_device_top3_vector, my_dual_best_swap}, ctx);
 
   // ctx.q.memcpy(mega_tour.data(), my_device_tour, mega_tour.size() * sizeof(int)).wait();
 
@@ -223,14 +223,13 @@ apply_swap_star(std::vector<cvrp::sycl_engine::DeviceRoute> routes_set[2],
 {
   auto& clients = instance.clients;
 
-  BestSwap identity {cvrp::INF_F, -1, -1, -1, -1, -1, -1};
+  auto [my_device_tour, my_device_routes, my_device_top3_vector, my_dual_best_swap] = my_ctx_data;
 
-  BestSwap identities[2] = {identity, identity};
-  ctx.q.memcpy(my_ctx_data.my_best_swap, identities, 2 * sizeof(BestSwap)).wait();
+  BestSwap identity_swap {cvrp::INF_F, -1, -1, -1, -1, -1, -1};
 
-  // ctx.q.memcpy(my_ctx_data.my_best_swap, &identity, sizeof(BestSwap)).wait();
+  DualBestSwap identity_dual {identity_swap, identity_swap};
 
-  auto [my_device_tour, my_device_routes, my_device_top3_vector, my_best_swap] = my_ctx_data;
+  ctx.q.memcpy(my_dual_best_swap, &identity_dual, sizeof(DualBestSwap)).wait();
 
   cvrp::sycl_engine::DeviceInstance d_instance = ctx.d_instance;
 
@@ -262,11 +261,12 @@ apply_swap_star(std::vector<cvrp::sycl_engine::DeviceRoute> routes_set[2],
 
   auto ev_main = ctx.q.submit([&] (sycl::handler & h){
 
-    auto reductor_a = sycl::reduction(my_ctx_data.my_best_swap, identity, FindBestSwap());
-    // auto reductor_b = sycl::reduction(my_ctx_data.my_best_swap + 1, identity, FindBestSwap());
+    auto reductor = sycl::reduction(my_ctx_data.my_dual_best_swap, identity_dual, FindDualBestSwap());
 
-    h.parallel_for(sycl::range<2>(simultaneous_proc, total_route_combs), reductor_a, /*reductor_b,*/ 
-    [=](sycl::id<2> idx, auto& res_reducer_a /*, auto& res_reducer_b*/){
+    h.parallel_for(sycl::range<2>(simultaneous_proc, total_route_combs), reductor,
+    [=](sycl::id<2> idx, auto& res_reducer){
+
+      DualBestSwap thread_result = { identity_swap, identity_swap };
 
       int id_part = idx[0];
       int id_comb = idx[1];
@@ -277,7 +277,7 @@ apply_swap_star(std::vector<cvrp::sycl_engine::DeviceRoute> routes_set[2],
       int r_i = d_route_pairs[id_comb].first;
       int r_j = d_route_pairs[id_comb].second;
 
-      BestSwap local_best = identity;
+      BestSwap local_best = identity_swap;
 
       local_best.r_i = r_i;
       local_best.r_j = r_j;
@@ -379,12 +379,15 @@ apply_swap_star(std::vector<cvrp::sycl_engine::DeviceRoute> routes_set[2],
           }
         }
       }
-      res_reducer_a.combine(local_best);
-      // if (id_part == 0){
-      // }
-      // else{
-      //   res_reducer_b.combine(local_best);
-      // }
+      
+      if (id_part == 0) {
+        thread_result.pA = local_best;
+      } 
+      else {
+        thread_result.pB = local_best;
+      }
+
+      res_reducer.combine(thread_result);
     });
   });
 
@@ -394,16 +397,24 @@ apply_swap_star(std::vector<cvrp::sycl_engine::DeviceRoute> routes_set[2],
 
     h.single_task([=]() {
     
-      if (my_best_swap->total_cost < 0) {
-          
-        complete_swap_star(my_best_swap, my_device_tour, my_device_routes + my_best_swap->r_i, my_device_routes + my_best_swap->r_j, d_instance);
+      if (my_dual_best_swap->pA.total_cost < 0) {
+
+        BestSwap* pA_best_swap = &(my_dual_best_swap->pA);
+
+        complete_swap_star(pA_best_swap, 
+                           my_device_tour, 
+                           my_device_routes + pA_best_swap->r_i, 
+                           my_device_routes + pA_best_swap->r_j, 
+                           d_instance);
       }
-      if (my_best_swap[1].total_cost < 0) {
+      if (my_dual_best_swap->pB.total_cost < 0) {
+
+        BestSwap* pB_best_swap = &(my_dual_best_swap->pB);
       
-        complete_swap_star(my_best_swap + 1, 
+        complete_swap_star(pB_best_swap, 
                            my_device_tour + tours_p_offset, 
-                           my_device_routes + routes_p_offset + my_best_swap[1].r_i, 
-                           my_device_routes + routes_p_offset + my_best_swap[1].r_j, 
+                           my_device_routes + routes_p_offset + pB_best_swap->r_i, 
+                           my_device_routes + routes_p_offset + pB_best_swap->r_j, 
                            d_instance);
       }
     });
@@ -416,7 +427,7 @@ apply_swap_star(std::vector<cvrp::sycl_engine::DeviceRoute> routes_set[2],
   BestSwap host_best_swap;
 
 // 2. Faz a cópia da VRAM (Device) para a RAM (Host) e aguarda a conclusão
-// ctx.q.memcpy(&host_best_swap, my_ctx_data.my_best_swap, sizeof(BestSwap)).wait();
+// ctx.q.memcpy(&host_best_swap, my_ctx_data.my_dual_best_swap, sizeof(BestSwap)).wait();
 
 //   throw std::runtime_error(std::format(
 //     "\n=== DEBUG EXCEPTION: MELHOR SWAP ENCONTRADO ===\n"

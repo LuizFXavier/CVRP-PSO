@@ -15,7 +15,7 @@ struct ContextData
   int* my_device_tour;
   DeviceRoute* my_device_routes;
   Top3Insertion* my_device_top3_vector;
-  BestSwap* my_best_swap;
+  DualBestSwap* my_dual_best_swap;
 };
 
 
@@ -33,7 +33,7 @@ public:
 
   Top3Insertion* d_top3_vector;
 
-  BestSwap* d_best_swap;
+  DualBestSwap* d_dual_best_swap;
 
   RoutePair* d_route_pairs;
 
@@ -77,7 +77,7 @@ public:
     
     d_routes = sycl::malloc_device<DeviceRoute>(max_routes * simultaneous_proc, q);
     
-    d_best_swap = sycl::malloc_device<BestSwap>(d_instance.dimension, q);
+    d_dual_best_swap = sycl::malloc_device<DualBestSwap>(1, q);
 
     max_route_combs = (max_routes * (max_routes - 1)) / 2;
 
@@ -102,7 +102,7 @@ public:
     if (d_routes) sycl::free(d_routes, q);
     if (d_top3_vector) sycl::free(d_top3_vector, q);
 
-    if (d_best_swap) sycl::free(d_best_swap, q);
+    if (d_dual_best_swap) sycl::free(d_dual_best_swap, q);
 
     if (d_route_pairs) sycl::free(d_route_pairs, q);
   }

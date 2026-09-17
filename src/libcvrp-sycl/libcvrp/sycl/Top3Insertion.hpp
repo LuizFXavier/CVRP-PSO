@@ -37,6 +37,23 @@ struct FindBestSwap
   }
 };
 
+struct DualBestSwap {
+  BestSwap pA;
+  BestSwap pB;
+};
+
+struct FindDualBestSwap {
+  DualBestSwap 
+  operator()(const DualBestSwap& a, const DualBestSwap& b) const 
+  {
+    DualBestSwap result;
+    // Compara A com A e B com B
+    result.pA = (a.pA.total_cost < b.pA.total_cost) ? a.pA : b.pA;
+    result.pB = (a.pB.total_cost < b.pB.total_cost) ? a.pB : b.pB;
+    return result;
+  }
+};
+
 struct Top3Insertion
 {
   insert_info best_insertions[3];

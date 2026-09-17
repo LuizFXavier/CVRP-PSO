@@ -131,7 +131,7 @@ test_swap_star(){
   int* my_device_tour = ctx.d_mega_tour;
   cvrp::sycl_engine::DeviceRoute* my_device_routes = ctx.d_routes;
   cvrp::sycl_engine::Top3Insertion* my_device_top3 = ctx.d_top3_vector;
-  cvrp::sycl_engine::BestSwap* my_best_swap = ctx.d_best_swap;
+  cvrp::sycl_engine::DualBestSwap* my_best_swap = ctx.d_dual_best_swap;
 
   ctx.q.memcpy(my_device_tour, mega_tour.data(), mega_tour.size() * sizeof(int)).wait();
   ctx.q.memcpy(my_device_routes, routes.data(), routes.size() * sizeof(cvrp::sycl_engine::DeviceRoute)).wait();
