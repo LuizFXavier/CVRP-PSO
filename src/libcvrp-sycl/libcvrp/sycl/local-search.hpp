@@ -8,6 +8,12 @@
 
 namespace cvrp::sycl_engine::local_search
 {
+  struct ActivePair {
+    int particle_id;
+    int r_i;
+    int r_j;
+  };
+  
   void optimize(std::vector<std::vector<int>*> mega_tours, Instance& instance, int start_id, ExecutionContext& ctx);
   
   std::vector<DeviceRoute> import_mega_tour(std::vector<int>& mega_tour, Instance& instance);

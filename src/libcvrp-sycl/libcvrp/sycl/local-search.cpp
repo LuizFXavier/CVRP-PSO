@@ -222,113 +222,87 @@ apply_swap_star(std::vector<cvrp::sycl_engine::DeviceRoute> routes_set[2],
                 ExecutionContext& ctx)
 {
   auto& clients = instance.clients;
-
   auto [my_device_tour, my_device_routes, my_device_top3_vector, my_dual_best_swap] = my_ctx_data;
 
   BestSwap identity_swap {cvrp::INF_F, -1, -1, -1, -1, -1, -1};
-
   DualBestSwap identity_dual {identity_swap, identity_swap};
 
   ctx.q.memcpy(my_dual_best_swap, &identity_dual, sizeof(DualBestSwap)).wait();
 
+  // 1. Pré-processamento na CPU: Agrupa pares válidos de AMBAS as partículas
+  std::vector<ActivePair> active_pairs;
+  active_pairs.reserve((routes_set[0].size() * (routes_set[0].size() - 1)) / 2 + 
+                       (routes_set[1].size() * (routes_set[1].size() - 1)) / 2);
+
+  for (int p = 0; p < 2; ++p) {
+    for (int i = 0; i < routes_set[p].size() - 1; ++i) {
+      for (int j = i + 1; j < routes_set[p].size(); ++j) {
+        if (routes_set[p][i].sector.overlap(routes_set[p][j].sector)) {
+          active_pairs.push_back({p, i, j});
+        }
+      }
+    }
+  }
+
+  // Se nenhuma combinação de rota se sobrepõe, sai cedo
+  if (active_pairs.empty()) return;
+
+  // 2. Cópia das combinações ativas para a GPU
+  ActivePair* d_active_pairs = sycl::malloc_device<ActivePair>(active_pairs.size(), ctx.q);
+  ctx.q.memcpy(d_active_pairs, active_pairs.data(), active_pairs.size() * sizeof(ActivePair)).wait();
+
   cvrp::sycl_engine::DeviceInstance d_instance = ctx.d_instance;
-
-  cvrp::sycl_engine::RoutePair* d_route_pairs = ctx.d_route_pairs;
-
   unsigned int instance_dimension = d_instance.dimension;
 
   int tours_p_offset = ctx.max_clients_per_tour;
-
   int routes_p_offset = ctx.max_routes;
-
-  int top3_p_offset = ctx.max_route_combs * instance_dimension;
-
   int top3_comb_offset = instance_dimension;
 
-  int routes_size[2] = {(int)routes_set[0].size(), (int)routes_set[1].size()};
-
-  int max_routes_counter = std::max(routes_size[0], routes_size[0]);
-
-  int routes_combs_counter[2] = {routes_size[0] * (routes_size[0] - 1) / 2, routes_size[1] * (routes_size[1] - 1) / 2};
-
-  int* d_routes_combs_counter = sycl::malloc_device<int>(2, ctx.q);
-
-  ctx.q.memcpy(d_routes_combs_counter, routes_combs_counter, 2 * sizeof(int)).wait();
-
-  int total_route_combs = (max_routes_counter * (max_routes_counter - 1)) / 2;
-
-  int simultaneous_proc = ctx.simultaneous_proc;
-
+  // 3. Execução do Kernel em Grid 1D
   auto ev_main = ctx.q.submit([&] (sycl::handler & h){
 
     auto reductor = sycl::reduction(my_ctx_data.my_dual_best_swap, identity_dual, FindDualBestSwap());
 
-    h.parallel_for(sycl::range<2>(simultaneous_proc, total_route_combs), reductor,
-    [=](sycl::id<2> idx, auto& res_reducer){
+    h.parallel_for(sycl::range<1>(active_pairs.size()), reductor,
+    [=](sycl::id<1> idx, auto& res_reducer){
 
       DualBestSwap thread_result = { identity_swap, identity_swap };
 
-      int id_part = idx[0];
-      int id_comb = idx[1];
-
-      if (id_comb > d_routes_combs_counter[id_part])
-        return;
-
-      int r_i = d_route_pairs[id_comb].first;
-      int r_j = d_route_pairs[id_comb].second;
+      int id_part = d_active_pairs[idx[0]].particle_id;
+      int r_i = d_active_pairs[idx[0]].r_i;
+      int r_j = d_active_pairs[idx[0]].r_j;
 
       BestSwap local_best = identity_swap;
-
       local_best.r_i = r_i;
       local_best.r_j = r_j;
 
-      // Pula rotas que não intersectam os setores circulares
-      if (!(my_device_routes[r_i].sector.overlap(my_device_routes[r_j].sector))) return;
-
-      int id_j = r_j * instance_dimension;
-
+      // Cálculo direto de ponteiros usando offsets
       int* particle_d_tour = my_device_tour + (id_part * tours_p_offset);
-      Top3Insertion* particle_d_top3_vector = my_device_top3_vector + (id_part * top3_p_offset) + (id_comb * top3_comb_offset);
-
       DeviceRoute* particle_d_routes = my_device_routes + (id_part * routes_p_offset);
+      
+      // Cada thread no Grid 1D ganha seu próprio espaço exclusivo no d_top3_vector
+      Top3Insertion* particle_d_top3_vector = my_device_top3_vector + (idx[0] * top3_comb_offset);
 
       DeviceRoute* r = particle_d_routes + r_i;
       DeviceRoute* r_ln = particle_d_routes + r_j;
 
-      // Top3 inserções de v em r'
+      // --- Início do Swap Star (Lógica original inalterada) ---
       for (int id_v = 0; id_v < r->size; ++id_v){
-
-        int top3_vector_index = id_v;
-
         int client_v = particle_d_tour[r->start_index + id_v];
-
-        particle_d_top3_vector[top3_vector_index] = findTop3Locations(client_v, 
-                                                                      particle_d_tour,
-                                                                      r_ln,
-                                                                      d_instance);
+        particle_d_top3_vector[id_v] = findTop3Locations(client_v, particle_d_tour, r_ln, d_instance);
       }
 
       int start_j_top3 = r->size;
 
-      // Top3 inserções de u em r
       for (int id_u = 0; id_u < r_ln->size; ++id_u){
-
-        int top3_vector_index = start_j_top3 + id_u;
-
         int client_u = particle_d_tour[r_ln->start_index + id_u];
-
-        particle_d_top3_vector[top3_vector_index] = findTop3Locations(client_u,
-                                                                      particle_d_tour,
-                                                                      r,
-                                                                      d_instance);
+        particle_d_top3_vector[start_j_top3 + id_u] = findTop3Locations(client_u, particle_d_tour, r, d_instance);
       }
 
       for (int id_v = 0; id_v < r->size; ++id_v){
-
         int client_v = particle_d_tour[r->start_index + id_v];
 
         for (int id_u = 0; id_u < r_ln->size; ++id_u){
-
           int client_u = particle_d_tour[r_ln->start_index + id_u];
           
           if(r->total_demand - d_instance.clients[client_v].demand + d_instance.clients[client_u].demand > d_instance.capacity)
@@ -337,15 +311,8 @@ apply_swap_star(std::vector<cvrp::sycl_engine::DeviceRoute> routes_set[2],
           if(r_ln->total_demand - d_instance.clients[client_u].demand + d_instance.clients[client_v].demand > d_instance.capacity)
             continue;
 
-          int top3_vector_index_v = id_v;
-          int top3_vector_index_u = start_j_top3 + id_u;
-
-          // Melhor inserção de v em r', desconsiderando U da rota r'
-
-          auto k = particle_d_top3_vector[top3_vector_index_v].get_best_insertion_except_client(client_u);
-
-          // Melhor inserção de u em r, fora inserção no mesmo lugar que o V e desconsiderando este da rota
-          auto k_ln = particle_d_top3_vector[top3_vector_index_u].get_best_insertion_except_client(client_v);
+          auto k = particle_d_top3_vector[id_v].get_best_insertion_except_client(client_u);
+          auto k_ln = particle_d_top3_vector[start_j_top3 + id_u].get_best_insertion_except_client(client_v);
 
           int client_v_pred = (id_v == 0) ? 0 : particle_d_tour[r->start_index + id_v - 1];
           int client_v_suce = (id_v == r->size - 1) ? 0 : particle_d_tour[r->start_index + id_v + 1];
@@ -353,37 +320,26 @@ apply_swap_star(std::vector<cvrp::sycl_engine::DeviceRoute> routes_set[2],
           int client_u_pred = (id_u == 0) ? 0 : particle_d_tour[r_ln->start_index + id_u - 1];
           int client_u_suce = (id_u == r_ln->size - 1) ? 0 : particle_d_tour[r_ln->start_index + id_u + 1];
 
-          // Custo de inserção de V na exata posição de U
           float swap_v_in_u = insertion_cost(client_v, client_u_pred, client_u_suce, d_instance);
-
-          // Melhor custo de inserção de V em r'
           float v_to_r_ln = sycl::fmin(swap_v_in_u, k.cost) - insertion_cost(client_v, client_v_pred, client_v_suce, d_instance);
 
-          // Custo de inserção de U na exata posição de V
           float swap_u_in_v = insertion_cost(client_u, client_v_pred, client_v_suce, d_instance);
-          
-          // Melhor custo de inserção de U em r
-          float u_to_r = sycl::fmin(swap_u_in_v, k_ln.cost)- insertion_cost(client_u, client_u_pred, client_u_suce, d_instance);
+          float u_to_r = sycl::fmin(swap_u_in_v, k_ln.cost) - insertion_cost(client_u, client_u_pred, client_u_suce, d_instance);
 
-          // Atualizar a melhor troca encontrada
           if (auto c = v_to_r_ln + u_to_r; c < local_best.total_cost) {
-
             local_best.total_cost = c;
-            
             local_best.v_tour_id = r->start_index + id_v;
             local_best.v_tour_dest = swap_v_in_u < k.cost ? r_ln->start_index + id_u : k.insert_index;
-            
             local_best.u_tour_id = r_ln->start_index + id_u;
             local_best.u_tour_dest = swap_u_in_v < k_ln.cost ? r->start_index + id_v : k_ln.insert_index;
-            
           }
         }
       }
       
+      // Atribuição de acordo com a partícula a qual a thread atual pertence
       if (id_part == 0) {
         thread_result.pA = local_best;
-      } 
-      else {
+      } else {
         thread_result.pB = local_best;
       }
 
@@ -391,16 +347,14 @@ apply_swap_star(std::vector<cvrp::sycl_engine::DeviceRoute> routes_set[2],
     });
   });
 
+  // 4. Efetiva as trocas encontradas
   ctx.q.submit([&] (sycl::handler& h){ 
 
     h.depends_on(ev_main);
 
     h.single_task([=]() {
-    
       if (my_dual_best_swap->pA.total_cost < 0) {
-
         BestSwap* pA_best_swap = &(my_dual_best_swap->pA);
-
         complete_swap_star(pA_best_swap, 
                            my_device_tour, 
                            my_device_routes + pA_best_swap->r_i, 
@@ -408,9 +362,7 @@ apply_swap_star(std::vector<cvrp::sycl_engine::DeviceRoute> routes_set[2],
                            d_instance);
       }
       if (my_dual_best_swap->pB.total_cost < 0) {
-
         BestSwap* pB_best_swap = &(my_dual_best_swap->pB);
-      
         complete_swap_star(pB_best_swap, 
                            my_device_tour + tours_p_offset, 
                            my_device_routes + routes_p_offset + pB_best_swap->r_i, 
@@ -421,29 +373,8 @@ apply_swap_star(std::vector<cvrp::sycl_engine::DeviceRoute> routes_set[2],
   });
 
   ctx.q.wait();
-
-  if (d_routes_combs_counter) sycl::free(d_routes_combs_counter, ctx.q);
-
-  BestSwap host_best_swap;
-
-// 2. Faz a cópia da VRAM (Device) para a RAM (Host) e aguarda a conclusão
-// ctx.q.memcpy(&host_best_swap, my_ctx_data.my_dual_best_swap, sizeof(BestSwap)).wait();
-
-//   throw std::runtime_error(std::format(
-//     "\n=== DEBUG EXCEPTION: MELHOR SWAP ENCONTRADO ===\n"
-//     "Custo Total (Delta): {}\n"
-//     "Rota origem de V (r_i): {}\n"
-//     "Rota origem de U (r_j): {}\n"
-//     "Cliente V - Índice Atual: {} | Índice Destino: {}\n"
-//     "Cliente U - Índice Atual: {} | Índice Destino: {}\n"
-//     "===============================================\n",
-//     host_best_swap.total_cost,
-//     host_best_swap.r_i,
-//     host_best_swap.r_j,
-//     host_best_swap.v_tour_id, host_best_swap.v_tour_dest,
-//     host_best_swap.u_tour_id, host_best_swap.u_tour_dest
-// ));
-
-  // sycl::free(d_valid_pairs, ctx.q);
+  
+  // Limpa o USM utilizado no pré-processamento
+  sycl::free(d_active_pairs, ctx.q);
 }
 } // namespace cvrp::sycl
