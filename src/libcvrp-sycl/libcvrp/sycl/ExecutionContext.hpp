@@ -14,7 +14,7 @@ struct ContextData
 {
   int* my_device_tour;
   DeviceRoute* my_device_routes;
-  Top3Insertion* my_device_top3_matrix;
+  Top3Insertion* my_device_top3_vector;
   BestSwap* my_best_swap;
 };
 
@@ -31,7 +31,7 @@ public:
 
   DeviceRoute* d_routes;
 
-  Top3Insertion* d_top3_matrix;
+  Top3Insertion* d_top3_vector;
 
   BestSwap* d_best_swap;
 
@@ -40,6 +40,10 @@ public:
   int max_clients_per_tour;
   
   int max_routes;
+
+  int max_route_combs;
+
+  int simultaneous_proc = 2;
 
   ExecutionContext()
   : q(sycl::default_selector_v) {}
@@ -69,15 +73,15 @@ public:
 
     max_clients_per_tour = instance.dimension + 1;
 
-    d_mega_tour = sycl::malloc_device<int>(max_clients_per_tour, q);
+    d_mega_tour = sycl::malloc_device<int>(max_clients_per_tour * simultaneous_proc, q);
     
-    d_routes = sycl::malloc_device<DeviceRoute>(max_routes, q);
+    d_routes = sycl::malloc_device<DeviceRoute>(max_routes * simultaneous_proc, q);
     
-    d_top3_matrix = sycl::malloc_device<Top3Insertion>(max_routes * (max_routes * d_instance.dimension), q);
-
     d_best_swap = sycl::malloc_device<BestSwap>(d_instance.dimension, q);
 
-    int max_route_combs = (max_routes * (max_routes - 1)) / 2;
+    max_route_combs = (max_routes * (max_routes - 1)) / 2;
+
+    d_top3_vector = sycl::malloc_device<Top3Insertion>((max_route_combs * d_instance.dimension) * simultaneous_proc, q);
 
     d_route_pairs = sycl::malloc_device<RoutePair>(max_route_combs, q);
 
@@ -96,7 +100,7 @@ public:
 
     if (d_mega_tour) sycl::free(d_mega_tour, q);
     if (d_routes) sycl::free(d_routes, q);
-    if (d_top3_matrix) sycl::free(d_top3_matrix, q);
+    if (d_top3_vector) sycl::free(d_top3_vector, q);
 
     if (d_best_swap) sycl::free(d_best_swap, q);
 
