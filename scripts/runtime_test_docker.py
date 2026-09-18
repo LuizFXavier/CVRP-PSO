@@ -22,7 +22,7 @@ elif argv[1].upper() == "-D":
 else:
     raise Exception("Não se sabe se é arquivo ou diretório!")
 
-caminho_output = "/app/output/PSO_data_sycl.xlsx"
+caminho_output = "/app/output/PSO_data_sycl_v3.xlsx"
 
 if len(argv) == 4:
     caminho_output = argv[3]
@@ -52,7 +52,7 @@ nParticulas = [250, 25, 50, 25]
 nRepeticoes = [500, 5000, 5000, 5000]
 nElite = [200, 5, 5, 25]
 
-NUM_THREADS = ["1", "16"]
+NUM_THREADS = ["1"]
 
 count = 1
 
