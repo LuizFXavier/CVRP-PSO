@@ -40,6 +40,13 @@ struct FindBestSwap
 struct Top3Insertion
 {
   insert_info best_insertions[3];
+
+  static Top3Insertion 
+  make() {
+    Top3Insertion t;
+    for (auto& b : t.best_insertions) b.cost = cvrp::INF_F;
+    return t;
+  }
   
   void 
   compareAndAdd(insert_info candidate)
