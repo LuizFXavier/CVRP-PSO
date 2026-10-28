@@ -92,7 +92,7 @@ run_pso(cvrp::Instance &instance, Hyperparameters hyperparameters, OptimizerFunc
     }
 
     // Execução dos mecanismos de busca local nas partículas pertencentes à elite
-    #pragma omp parallel for
+    
     for (int e = 0; e < elite.size(); ++e){
       optimizer(elite[e]->curr_solution, instance, e);
 
