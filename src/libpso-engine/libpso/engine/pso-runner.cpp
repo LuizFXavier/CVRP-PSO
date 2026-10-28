@@ -119,7 +119,7 @@ run_pso(cvrp::Instance &instance, Hyperparameters hyperparameters, OptimizerFunc
       }
     }
     
-    auto w = (hyperparameters.w_max - hyperparameters.w_min) / (hyperparameters.iterations * i);
+    float w = hyperparameters.w_max - (static_cast<float>(i) / hyperparameters.iterations) * (hyperparameters.w_max - hyperparameters.w_min);
 
     auto c1 = hyperparameters.cognitive_c;
     auto c2 = hyperparameters.social_c;
