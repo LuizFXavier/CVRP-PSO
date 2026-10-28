@@ -321,6 +321,15 @@ apply_swap_star(std::vector<DeviceRoute>& routes,
     return a.size < b.size;
   })->size;
 
+  size_t local_bytes = max_r_size * (2 * sizeof(int) + 2 * sizeof(Top3Insertion));
+  auto   local_lim   = ctx.q.get_device().get_info<sycl::info::device::local_mem_size>();
+
+  if (local_bytes > local_lim)             throw std::runtime_error("memoria local insuficiente");
+  if (routes.size() > (size_t)ctx.max_routes) throw std::runtime_error("rotas > max_routes");
+
+  int max_routes_combs = ctx.max_routes * (ctx.max_routes - 1 ) / 2;
+  if (total_route_combs > max_routes_combs) throw std::runtime_error("pares > max_route_combs");
+
   auto nd_main = ctx.q.submit([&] (sycl::handler& h){
 
     sycl::range<1> global{global_size};
@@ -428,6 +437,7 @@ apply_swap_star(std::vector<DeviceRoute>& routes,
       
     });
   });
+  ctx.q.wait_and_throw();
 
   ctx.q.submit([&](sycl::handler& h){
 
@@ -462,7 +472,7 @@ apply_swap_star(std::vector<DeviceRoute>& routes,
 
     });
     
-  }).wait();
+  }).wait_and_throw();
 
 }
 } // namespace cvrp::sycl
