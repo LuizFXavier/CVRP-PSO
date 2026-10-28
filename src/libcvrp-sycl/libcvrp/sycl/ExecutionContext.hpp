@@ -42,7 +42,19 @@ public:
   int max_routes;
 
   ExecutionContext()
-  : q(sycl::default_selector_v) {}
+  : q(sycl::default_selector_v,
+      [](sycl::exception_list errs) {
+        for (auto& e : errs) {
+          try { 
+            std::rethrow_exception(e); 
+          }
+          catch (const sycl::exception& ex) { 
+            std::cerr << "SYCL: " << ex.what() << "\n"; 
+            std::abort(); 
+          }
+        }
+      },
+      sycl::property_list{sycl::property::queue::enable_profiling()}) {}
 
   // Carrega a instância lida para a memória do dispositivo
   inline void 
@@ -75,9 +87,10 @@ public:
     
     d_top3_matrix = sycl::malloc_device<Top3Insertion>(max_routes * (max_routes * d_instance.dimension), q);
 
-    d_best_swap = sycl::malloc_device<BestSwap>(d_instance.dimension, q);
-
+    
     int max_route_combs = (max_routes * (max_routes - 1)) / 2;
+
+    d_best_swap = sycl::malloc_device<BestSwap>(max_route_combs, q);
 
     d_route_pairs = sycl::malloc_device<RoutePair>(max_route_combs, q);
 
