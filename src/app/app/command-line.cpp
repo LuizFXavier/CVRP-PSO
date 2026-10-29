@@ -46,7 +46,7 @@ parse_cli(int argc, const char* argv[])
 
     else if(valid_argument("--out", i) || valid_argument("--output", i)){
       if(i+1 >= argc)
-          throw std::runtime_error(std::format("Error: {} option requires a directory path.", arg));
+        throw std::runtime_error(std::format("Error: {} option requires a directory path.", arg));
 
       config.output_dir = argv[i+1];
       ++i;
@@ -65,6 +65,26 @@ parse_cli(int argc, const char* argv[])
       }
 
       ++i;
+    }
+
+    else if(valid_argument("--runs", i)){
+
+      try{
+        if(i+1 >= argc)
+          throw std::runtime_error("");
+
+        config.runs = std::stoi(argv[i+1]);  
+      }
+      catch(const std::exception& e){
+        throw std::runtime_error(std::format("Error: {} option requires an integer value.", arg));
+      }
+
+      ++i;
+    }
+
+    else if(valid_argument("--save_times", i)){
+
+      config.save_times = true;
     }
 
     else if(valid_argument("--swarm-size", i) || valid_argument("--swarm", i)){
@@ -127,6 +147,36 @@ parse_cli(int argc, const char* argv[])
       ++i;
     }
 
+    else if(valid_argument("--w-max", i)){
+
+      try{
+        if(i+1 >= argc)
+          throw std::runtime_error("");
+
+        pso.w_max = std::stof(argv[i+1]);  
+      }
+      catch(const std::exception& e){
+        throw std::runtime_error(std::format("Error: {} option requires a float value.", arg));
+      }
+
+      ++i;
+    }
+
+    else if(valid_argument("--w-min", i)){
+
+      try{
+        if(i+1 >= argc)
+          throw std::runtime_error("");
+
+        pso.w_min = std::stof(argv[i+1]);  
+      }
+      catch(const std::exception& e){
+        throw std::runtime_error(std::format("Error: {} option requires a float value.", arg));
+      }
+
+      ++i;
+    }
+
   }
 
   if(config.instance_path.empty())
@@ -141,8 +191,20 @@ parse_cli(int argc, const char* argv[])
   if(pso.swarm_size <= 0)
     throw std::runtime_error("Error: --swarm-size setting is missing or has an invalid value.");
 
+  if(pso.w_max < 0)
+    throw std::runtime_error("Error: --w-max setting must be positive or zero.");
+
+  if(pso.w_min < 0)
+    throw std::runtime_error("Error: --w-min setting must be positive or zero.");
+
+  if(pso.w_min > pso.w_max)
+    throw std::runtime_error("Error: --w-max setting must be greater than --w-min.");
+
   if(config.runs <= 0)
     throw std::runtime_error("Error: --runs setting must be positive.");
+
+  if(config.start_run <= 0)
+    throw std::runtime_error("Error: --start-run setting must be positive.");
 
   return {config, pso};
 }

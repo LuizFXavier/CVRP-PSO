@@ -9,7 +9,9 @@ namespace app
     std::string instance_path{};
     std::string output_dir{};
     int runs = 1;
-    bool showHelp{};
+    int start_run = 1;
+    bool showHelp = false;
+    bool save_times = false;
   };
 
   struct Parameters{
