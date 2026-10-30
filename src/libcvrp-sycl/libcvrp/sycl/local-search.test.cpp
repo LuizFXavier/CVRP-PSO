@@ -59,17 +59,21 @@ run_swap_star(cvrp::Instance& inst,
 {
   cvrp::sycl_engine::ExecutionContext ctx;
 
-  ctx.load_instance(inst);
+  ctx.setup(inst, 1);
 
   int* my_device_tour = ctx.d_mega_tour;
   cvrp::sycl_engine::DeviceRoute* my_device_routes = ctx.d_routes;
-  cvrp::sycl_engine::Top3Insertion* my_device_top3 = ctx.d_top3_matrix;
   cvrp::sycl_engine::BestSwap* my_best_swap = ctx.d_best_swap;
 
   ctx.q.memcpy(my_device_tour, mega_tour.data(), mega_tour.size() * sizeof(int)).wait();
   ctx.q.memcpy(my_device_routes, routes.data(), routes.size() * sizeof(cvrp::sycl_engine::DeviceRoute)).wait();
 
-  cvrp::sycl_engine::local_search::apply_swap_star(routes, inst, cvrp::sycl_engine::ContextData{my_device_tour, my_device_routes, my_device_top3, my_best_swap}, ctx);
+  std::vector<std::vector<cvrp::sycl_engine::DeviceRoute>> batch_routes = { routes };
+
+  int num_pairs = routes.size() * (routes.size() - 1) / 2;
+  ctx.q.memcpy(ctx.d_num_pairs, &num_pairs, sizeof(int)).wait();
+
+  cvrp::sycl_engine::local_search::apply_swap_star(batch_routes, inst, ctx);
 
   SwapStarResult result;
 
@@ -428,6 +432,8 @@ main()
   test_swap_star_best_pair_among_three_routes();
   test_swap_star_many_route_pairs();
   test_swap_star_sector_pruning();
+  test_swap_star_long_routes();
+
   return 0;
 }
 
@@ -505,7 +511,7 @@ test_swap_star(){
 
   cvrp::sycl_engine::ExecutionContext ctx;
 
-  ctx.load_instance(inst);
+  ctx.setup(inst, 1);
 
   std::vector<int> mega_tour = {0, 1, 4, 5, 6, 2, 3, 0};
 
@@ -527,13 +533,17 @@ test_swap_star(){
 
   int* my_device_tour = ctx.d_mega_tour;
   cvrp::sycl_engine::DeviceRoute* my_device_routes = ctx.d_routes;
-  cvrp::sycl_engine::Top3Insertion* my_device_top3 = ctx.d_top3_matrix;
   cvrp::sycl_engine::BestSwap* my_best_swap = ctx.d_best_swap;
 
   ctx.q.memcpy(my_device_tour, mega_tour.data(), mega_tour.size() * sizeof(int)).wait();
   ctx.q.memcpy(my_device_routes, routes.data(), routes.size() * sizeof(cvrp::sycl_engine::DeviceRoute)).wait();
 
-  cvrp::sycl_engine::local_search::apply_swap_star(routes, inst, cvrp::sycl_engine::ContextData{my_device_tour, my_device_routes, my_device_top3, my_best_swap}, ctx);
+  int num_pairs = routes.size() * (routes.size() - 1) / 2;
+  ctx.q.memcpy(ctx.d_num_pairs, &num_pairs, sizeof(int)).wait();
+
+  std::vector<std::vector<cvrp::sycl_engine::DeviceRoute>> batch_routes = { routes };
+
+  cvrp::sycl_engine::local_search::apply_swap_star(batch_routes, inst, ctx);
 
   std::vector<int> comparison = {0, 1, 4, 6, 5, 2, 3, 0};
 

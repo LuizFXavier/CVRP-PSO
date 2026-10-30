@@ -9,8 +9,8 @@ struct DeviceInstance {
   unsigned int dimension{};
   unsigned int capacity{};
   unsigned int minimum_routes{};
-  cvrp::Client* clients;         // Ponteiro para memória USM Device
-  float* distance_matrix;        // Ponteiro para memória USM Device
+  cvrp::Client* clients{};         // Ponteiro para memória USM Device
+  float* distance_matrix{};        // Ponteiro para memória USM Device
   
   inline float client_distance(int from, int to) const {
     return distance_matrix[from * dimension + to];

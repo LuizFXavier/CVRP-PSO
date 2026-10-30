@@ -14,7 +14,6 @@ struct ContextData
 {
   int* my_device_tour;
   DeviceRoute* my_device_routes;
-  Top3Insertion* my_device_top3_matrix;
   BestSwap* my_best_swap;
 };
 
@@ -25,21 +24,21 @@ ExecutionContext {
 public:
 
   sycl::queue q; // Fila de execução atrelada ao dispositivo
-  DeviceInstance d_instance; // Guarda a struct com os ponteiros
+  DeviceInstance d_instance{}; // Guarda a struct com os ponteiros
 
-  int* d_mega_tour;
+  int* d_mega_tour{};
 
-  DeviceRoute* d_routes;
+  DeviceRoute* d_routes{};
 
-  Top3Insertion* d_top3_matrix;
+  BestSwap* d_best_swap{};
 
-  BestSwap* d_best_swap;
+  RoutePair* d_route_pairs{};
 
-  RoutePair* d_route_pairs;
+  int* d_num_pairs{};
 
-  int max_clients_per_tour;
+  int peak_clients_per_tour{};
   
-  int max_routes;
+  int peak_routes{};
 
   ExecutionContext()
   : q(sycl::default_selector_v,
@@ -55,6 +54,27 @@ public:
         }
       },
       sycl::property_list{sycl::property::queue::enable_profiling()}) {}
+
+  inline
+  void setup(const cvrp::Instance& instance, int batch_size)
+  {
+
+    load_instance(instance);
+
+    this->d_mega_tour = sycl::malloc_device<int>(peak_clients_per_tour * batch_size, q);
+
+    this->d_routes = sycl::malloc_device<DeviceRoute>(peak_routes * batch_size, q);
+
+    int max_route_combs = (peak_routes * (peak_routes - 1)) / 2;
+
+    this->d_best_swap = sycl::malloc_device<BestSwap>(max_route_combs * batch_size, q);
+
+    this->d_route_pairs = sycl::malloc_device<RoutePair>(max_route_combs, q);
+    
+    this->d_num_pairs = sycl::malloc_device<int>(batch_size, q);
+
+    setup_route_combs(d_instance.minimum_routes, peak_routes);
+  }
 
   // Carrega a instância lida para a memória do dispositivo
   inline void 
@@ -77,29 +97,12 @@ public:
 
     // Alocação dos dados para as buscas locais
 
-    max_routes = d_instance.minimum_routes * 2;
+    this->peak_routes = d_instance.minimum_routes * 2;
 
-    max_clients_per_tour = instance.dimension + 1;
-
-    d_mega_tour = sycl::malloc_device<int>(max_clients_per_tour, q);
-    
-    d_routes = sycl::malloc_device<DeviceRoute>(max_routes, q);
-    
-    d_top3_matrix = sycl::malloc_device<Top3Insertion>(max_routes * (max_routes * d_instance.dimension), q);
-
-    
-    int max_route_combs = (max_routes * (max_routes - 1)) / 2;
-
-    d_best_swap = sycl::malloc_device<BestSwap>(max_route_combs, q);
-
-    d_route_pairs = sycl::malloc_device<RoutePair>(max_route_combs, q);
-
-    setup_route_combs(d_instance.minimum_routes, max_routes); 
+    this->peak_clients_per_tour = instance.dimension + 1;
 
     q.wait();
   }
-
-  void setup_route_combs(int minimum_routes, int max_routes);
   
   // Destrutor limpa a memória da GPU
   ~ExecutionContext() 
@@ -109,11 +112,15 @@ public:
 
     if (d_mega_tour) sycl::free(d_mega_tour, q);
     if (d_routes) sycl::free(d_routes, q);
-    if (d_top3_matrix) sycl::free(d_top3_matrix, q);
 
     if (d_best_swap) sycl::free(d_best_swap, q);
 
     if (d_route_pairs) sycl::free(d_route_pairs, q);
+
+    if (d_num_pairs) sycl::free(d_num_pairs, q);
   }
+
+private:
+  void setup_route_combs(int minimum_routes, int peak_routes);
 };
 }

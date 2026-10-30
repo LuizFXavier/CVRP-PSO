@@ -3,7 +3,7 @@
 namespace cvrp::sycl_engine
 {
 void 
-ExecutionContext::setup_route_combs(int minimum_routes, int max_routes)
+ExecutionContext::setup_route_combs(int minimum_routes, int peak_routes)
 {
   auto d_route_pairs = this->d_route_pairs;
 
@@ -31,7 +31,7 @@ ExecutionContext::setup_route_combs(int minimum_routes, int max_routes)
       
       int offset = minimum_combs;
 
-      for (int i = minimum_routes; i < max_routes; ++i){
+      for (int i = minimum_routes; i < peak_routes; ++i){
         for (int j = 0; j < i; ++j){
           d_route_pairs[offset].first = i;
           d_route_pairs[offset].second = j;

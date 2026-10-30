@@ -15,23 +15,47 @@
 namespace cvrp::sycl_engine::local_search
 {
 void 
-optimize(std::vector<int>& mega_tour, Instance& instance, int start_id, ExecutionContext& ctx)
+optimize(std::vector<std::vector<int>*>& batch_tours, Instance& instance, ExecutionContext& ctx)
 {
-  auto routes = import_mega_tour(mega_tour, instance);
+  
+  std::vector<std::vector<DeviceRoute>> batch_routes;
 
-  apply_two_opt(mega_tour, routes, instance);
+  std::vector<int> batch_num_pairs;
 
-  int* my_device_tour = ctx.d_mega_tour;
-  DeviceRoute* my_device_routes = ctx.d_routes;
-  Top3Insertion* my_device_top3_matrix = ctx.d_top3_matrix;
-  BestSwap* my_best_swap = ctx.d_best_swap;
+  batch_routes.resize(batch_tours.size());
+  batch_num_pairs.resize(batch_tours.size());
 
-  ctx.q.memcpy(my_device_tour, mega_tour.data(), mega_tour.size() * sizeof(int)).wait();
-  ctx.q.memcpy(my_device_routes, routes.data(), routes.size() * sizeof(DeviceRoute)).wait();
+  // Extrai as rotas do batch de tours e aplica o 2-opt nelas
+  for (int i = 0; i < batch_routes.size(); ++i){
 
-  apply_swap_star(routes, instance, ContextData{my_device_tour, my_device_routes, my_device_top3_matrix, my_best_swap}, ctx);
+    batch_routes[i] = import_mega_tour(*(batch_tours[i]), instance);
 
-  ctx.q.memcpy(mega_tour.data(), my_device_tour, mega_tour.size() * sizeof(int)).wait();
+    batch_num_pairs[i] = batch_routes[i].size() * (batch_routes[i].size() - 1) / 2;
+
+    apply_two_opt(*(batch_tours[i]), batch_routes[i], instance);
+  }
+
+  // Cópia dos mega_tours, rotas e seus tamanhos para a GPU
+  for (int i = 0; i < batch_routes.size(); ++i){
+
+    ctx.q.memcpy(ctx.d_mega_tour + i * ctx.peak_clients_per_tour, batch_tours[i]->data(), batch_tours[i]->size() * sizeof(int));
+    ctx.q.memcpy(ctx.d_routes + i * ctx.peak_routes, batch_routes[i].data(), batch_routes[i].size() * sizeof(DeviceRoute));
+  }
+  
+  ctx.q.memcpy(ctx.d_num_pairs, batch_num_pairs.data(), batch_num_pairs.size() * sizeof(int));
+
+  ctx.q.wait();
+
+  apply_swap_star(batch_routes, instance, ctx);
+
+  // Cópia dos mega_tours, rotas e seus tamanhos da GPU para a CPU
+  for (int i = 0; i < batch_routes.size(); ++i){
+
+    ctx.q.memcpy(batch_tours[i]->data(), ctx.d_mega_tour + i * ctx.peak_clients_per_tour, batch_tours[i]->size() * sizeof(int));
+    
+  }
+
+  ctx.q.wait();
 }
 
 std::vector<DeviceRoute> 
@@ -114,7 +138,7 @@ namespace
   }
 
   inline Top3Insertion
-  findTop3Locations(int client_v, int* my_device_tour, DeviceRoute* r_ln, cvrp::sycl_engine::DeviceInstance instance)
+  findTop3Locations(int client_v, int* d_tour, DeviceRoute* r_ln, cvrp::sycl_engine::DeviceInstance instance)
   {   
     Top3Insertion top3;
 
@@ -122,10 +146,10 @@ namespace
     for (auto i = 0; i <= r_ln->size; ++i){
 
       // O vizinho anterior a 'i'. Se 'i' for o primeiro cliente, o vizinho é o depósito
-      int node_prev_i = (i == 0) ? 0 : my_device_tour[r_ln->start_index + i - 1];
+      int node_prev_i = (i == 0) ? 0 : d_tour[r_ln->start_index + i - 1];
 
       // O vizinho posterior a 'i'. Se 'i' for o último cliente, o vizinho é o depósito
-      int node_next_i = (i == r_ln->size) ? 0 : my_device_tour[r_ln->start_index + i ];
+      int node_next_i = (i == r_ln->size) ? 0 : d_tour[r_ln->start_index + i ];
 
       top3.compareAndAdd(insert_info{i + r_ln->start_index, node_prev_i, node_next_i, insertion_cost(client_v, node_prev_i, node_next_i, instance)});
     }
@@ -163,7 +187,7 @@ namespace
   constexpr uint64_t NO_KEY = ~0ull;
 
   inline bool
-  eval_pair_swap(u_int32_t t, 
+  eval_pair_swap(uint32_t t, 
                  int* r_tile, int* rln_tile, 
                  DeviceRoute r, DeviceRoute rln,
                  Top3Insertion* top3_v, Top3Insertion* top3_u,
@@ -291,49 +315,70 @@ namespace
 }
 
 void 
-apply_swap_star(std::vector<DeviceRoute>& routes, 
+apply_swap_star(std::vector<std::vector<DeviceRoute>>& batch_routes,
                 Instance& instance,
-                ContextData my_ctx_data,
                 ExecutionContext& ctx)
 {
-  auto& clients = instance.clients;
-
-  auto [my_device_tour, my_device_routes, my_device_top3_matrix, my_best_swap] = my_ctx_data;
-
+  
   cvrp::sycl_engine::DeviceInstance d_instance = ctx.d_instance;
-
   cvrp::sycl_engine::RoutePair* d_route_pairs = ctx.d_route_pairs;
 
+  int* d_tour = ctx.d_mega_tour;
+  DeviceRoute* d_routes = ctx.d_routes;
   cvrp::sycl_engine::BestSwap* d_best_swap = ctx.d_best_swap;
+  int* d_num_pairs = ctx.d_num_pairs;
+  int peak_routes = ctx.peak_routes;
+  int peak_clients = ctx.peak_clients_per_tour;
 
-  unsigned int instance_dimension = d_instance.dimension;
+  int batch_size = batch_routes.size();
 
-  int matrix_line_size = instance_dimension * ctx.max_routes;
+  auto max_routes_batch_it = std::max_element(
+    batch_routes.begin(), 
+    batch_routes.end(), 
+    [](const std::vector<DeviceRoute>& a, const std::vector<DeviceRoute>& b) {
+      return a.size() < b.size();
+    }
+  );
+  
+  size_t max_routes = max_routes_batch_it->size();
 
-  int total_route_combs = (routes.size() * (routes.size() - 1)) / 2;
+  int max_combs = (max_routes > 1) ? (max_routes * (max_routes - 1)) / 2 : 0;
+
+  size_t max_r_size = 0;
+  for (const auto& routes : batch_routes) {
+    if (!routes.empty()) {
+      auto max_route_it = std::max_element(
+        routes.begin(), 
+        routes.end(), 
+        [](const DeviceRoute& a, const DeviceRoute& b) {
+          return a.size < b.size;
+        }
+      );
+      if (max_route_it->size > max_r_size) {
+        max_r_size = max_route_it->size;
+      }
+    }
+  }
 
   BestSwap identity {cvrp::INF_F, -1, -1, -1, -1, -1, -1};
 
   size_t block_size = 32;
-  size_t global_size = total_route_combs * block_size;
 
-  size_t max_r_size = std::max_element(routes.begin(), routes.end(), [](auto& a, auto& b) {
-    return a.size < b.size;
-  })->size;
+  {
+    size_t local_bytes = max_r_size * (2 * sizeof(int) + 2 * sizeof(Top3Insertion));
+    auto   local_lim   = ctx.q.get_device().get_info<sycl::info::device::local_mem_size>();
 
-  size_t local_bytes = max_r_size * (2 * sizeof(int) + 2 * sizeof(Top3Insertion));
-  auto   local_lim   = ctx.q.get_device().get_info<sycl::info::device::local_mem_size>();
+    if (local_bytes > local_lim)             throw std::runtime_error("memoria local insuficiente");
+    if (max_routes > (size_t)ctx.peak_routes) throw std::runtime_error("rotas > peak_routes");
 
-  if (local_bytes > local_lim)             throw std::runtime_error("memoria local insuficiente");
-  if (routes.size() > (size_t)ctx.max_routes) throw std::runtime_error("rotas > max_routes");
-
-  int max_routes_combs = ctx.max_routes * (ctx.max_routes - 1 ) / 2;
-  if (total_route_combs > max_routes_combs) throw std::runtime_error("pares > max_route_combs");
+    int absolute_max_routes_combs = ctx.peak_routes * (ctx.peak_routes - 1 ) / 2;
+    if (max_combs > absolute_max_routes_combs) throw std::runtime_error("pares > max_route_combs");
+  }
 
   auto nd_main = ctx.q.submit([&] (sycl::handler& h){
 
-    sycl::range<1> global{global_size};
-    sycl::range<1> local{block_size};
+    sycl::range<2> global{(size_t) batch_size, max_combs * block_size};
+    sycl::range<2> local{1, block_size};
 
     auto tile_r = sycl::local_accessor<int, 1>(max_r_size, h);
     auto tile_rln = sycl::local_accessor<int, 1>(max_r_size, h);
@@ -341,25 +386,33 @@ apply_swap_star(std::vector<DeviceRoute>& routes,
     auto top3_v = sycl::local_accessor<Top3Insertion, 1>(max_r_size, h);
     auto top3_u = sycl::local_accessor<Top3Insertion, 1>(max_r_size, h);
 
-    h.parallel_for(sycl::nd_range<1>{global, local},
-    [=](sycl::nd_item<1> it){
+    h.parallel_for(sycl::nd_range<2>{global, local},
+    [=](sycl::nd_item<2> it){
 
       auto gp = it.get_group();
+
+      const int    batch_id = it.get_group(0);        
+      const int    comb_id  = it.get_group(1);
+      const size_t local_id = it.get_local_id(1);
+
+      BestSwap* best_swap_r_rln = d_best_swap + (size_t)batch_id * max_combs + comb_id;
+
+      if (comb_id >= d_num_pairs[batch_id]) {
+        if (gp.leader())
+          *best_swap_r_rln = identity;
+        return;
+      }
+
+      int r_i = d_route_pairs[comb_id].first;
+      int r_j = d_route_pairs[comb_id].second;
+
+      const DeviceRoute* p_routes = d_routes + (size_t)batch_id * peak_routes;
+      const int* p_tour = d_tour + (size_t)batch_id * peak_clients;
       
-      auto global_id = it.get_global_id();
-      auto group_id = gp.get_group_linear_id();
-      auto local_id = it.get_local_id(0);
-
-      int r_i = d_route_pairs[group_id].first;
-      int r_j = d_route_pairs[group_id].second;
-
+      DeviceRoute r = p_routes[r_i];
+      DeviceRoute rln = p_routes[r_j];
+      
       // Verificar se rotas se sobrepõem
-
-      BestSwap* best_swap_r_rln = d_best_swap + group_id;
-
-      DeviceRoute r = my_device_routes[r_i];
-      DeviceRoute rln = my_device_routes[r_j];
-
       if (!r.sector.overlap(rln.sector)) {
         if (gp.leader()) 
           *best_swap_r_rln = identity;
@@ -371,11 +424,11 @@ apply_swap_star(std::vector<DeviceRoute>& routes,
       
       // Carrega o conteúdo de R para a memória local
       for (auto k = local_id; k < r.size; k += block_size)
-        tile_r[k] = my_device_tour[r.start_index + k];
+        tile_r[k] = p_tour[r.start_index + k];
       
       // Carrega o conteúdo de R' para a memória local
       for (auto k = local_id; k < rln.size; k += block_size)
-        tile_rln[k] = my_device_tour[rln.start_index + k];
+        tile_rln[k] = p_tour[rln.start_index + k];
 
       sycl::group_barrier(gp);
 
@@ -425,7 +478,7 @@ apply_swap_star(std::vector<DeviceRoute>& routes,
           result.r_i = r_i; 
           result.r_j = r_j;
   
-          eval_pair_swap((u_int32_t) winner, r_ptr, rln_ptr, r, rln, top3_v_ptr, top3_u_ptr, d_instance, result);
+          eval_pair_swap((uint32_t) winner, r_ptr, rln_ptr, r, rln, top3_v_ptr, top3_u_ptr, d_instance, result);
   
           *best_swap_r_rln = result;
         }
@@ -437,25 +490,27 @@ apply_swap_star(std::vector<DeviceRoute>& routes,
       
     });
   });
-  ctx.q.wait_and_throw();
 
   ctx.q.submit([&](sycl::handler& h){
 
     h.depends_on(nd_main);
 
-    sycl::range<1> global{1 * block_size};
+    sycl::range<1> global{batch_size * block_size};
     sycl::range<1> local{block_size};
 
     h.parallel_for(sycl::nd_range<1>{global, local},
     [=](sycl::nd_item<1> it){
       
       auto gp = it.get_group();
-      auto local_id = it.get_local_id(0);
+      const int batch_id = gp.get_group_linear_id();
+      const size_t local_id = it.get_local_id(0);
 
-      u_int64_t k = NO_KEY;
+      const BestSwap* p_best_swap = d_best_swap + (size_t)batch_id * max_combs;
 
-      for (int c = local_id; c < total_route_combs; c += block_size){
-        float cost = d_best_swap[c].total_cost;
+      uint64_t k = NO_KEY;
+
+      for (int c = local_id; c < max_combs; c += block_size){
+        float cost = p_best_swap[c].total_cost;
 
         k = sycl::min(k, make_key(cost, c));
       }
@@ -464,10 +519,14 @@ apply_swap_star(std::vector<DeviceRoute>& routes,
 
       if (gp.leader() && winner != NO_KEY){
 
-        BestSwap best = d_best_swap[uint32_t(winner)];
+        BestSwap best = p_best_swap[uint32_t(winner)];
 
-        if (best.total_cost < 0)
-          complete_swap_star(&best, my_device_tour, my_device_routes + best.r_i, my_device_routes + best.r_j, d_instance);
+        if (best.total_cost < 0) {
+          DeviceRoute* p_routes_b = d_routes + (size_t)batch_id * peak_routes;
+          complete_swap_star(&best,
+                            d_tour + (size_t)batch_id * peak_clients,
+                            p_routes_b + best.r_i, p_routes_b + best.r_j, d_instance);
+        }
       }
 
     });
