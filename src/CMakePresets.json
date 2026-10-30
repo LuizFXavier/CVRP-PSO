@@ -54,7 +54,10 @@
 
         "ACPP_TARGETS":"generic",
 
-        "CMAKE_CXX_SCAN_FOR_MODULES": "OFF"
+        "CMAKE_CXX_SCAN_FOR_MODULES": "OFF",
+
+        "ENABLE_SYCL": "ON",
+        "USE_OPENMP": "OFF"
       }
     },
     {
@@ -65,7 +68,9 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_CXX_FLAGS_RELEASE": "-O3 -ffast-math",
-        "ACPP_TARGETS": "generic" 
+        "ACPP_TARGETS": "generic",
+        "ENABLE_SYCL": "ON",
+        "USE_OPENMP": "OFF"
       }
 }
   ],
