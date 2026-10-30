@@ -19,17 +19,17 @@ main(int argc, const char *argv[])
 
   int simultaneous_particles = hyperparameters.swarm_size; 
   cvrp::sycl_engine::ExecutionContext ctx;
-  ctx.load_instance(instance);
+  ctx.setup(instance, hyperparameters.elite_size);
 
   // Cria a função injetável usando lambda tendo acesso às variáveis 'instance' e 'ctx' da main
-  auto sycl_optimizer = [&](std::vector<int>& tour, cvrp::Instance& instance, int particle_id) {
-      cvrp::sycl_engine::local_search::optimize(tour, instance, particle_id, ctx);
+  auto sycl_optimizer = [&](std::vector<std::vector<int>*>& tours, cvrp::Instance& instance) {
+
+    cvrp::sycl_engine::local_search::optimize(tours, instance, ctx);
   };
 
   for (int i = 0; i < configIO.runs; ++i){
 
     auto start_time = std::chrono::high_resolution_clock::now();
-
     
     auto best_particle = pso::run_pso(instance, hyperparameters, sycl_optimizer);
 

@@ -93,10 +93,22 @@ run_pso(cvrp::Instance &instance, Hyperparameters hyperparameters, OptimizerFunc
 
     // Execução dos mecanismos de busca local nas partículas pertencentes à elite
     
-    for (int e = 0; e < elite.size(); ++e){
-      optimizer(elite[e]->curr_solution, instance, e);
 
-      elite[e]->curr_of = fitness(*(elite[e]), instance);
+    if (!elite.empty()) {
+      std::vector<std::vector<int>*> elite_content;
+      elite_content.reserve(elite.size());
+
+      for (auto* p : elite) {
+        elite_content.push_back(&(p->curr_solution));
+      }
+
+      // Envia a elite inteira de uma só vez para o otimizador (GPU/Batch)
+      optimizer(elite_content, instance);
+
+      // Atualiza o fitness de todos os membros da elite após a otimização
+      for (auto* p : elite) {
+        p->curr_of = fitness(*p, instance);
+      }
     }
 
     // Iteração para atualização de p_best e g_best

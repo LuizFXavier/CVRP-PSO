@@ -14,7 +14,8 @@ bool test_trivial_instance();
 bool test_zero_iterations();
 bool test_reproducible();
 
-auto optimizer = [](std::vector<int>& mega_tour, cvrp::Instance& instance, int particle_id) {
+auto optimizer = [](std::vector<std::vector<int>*>& tours, cvrp::Instance& instance) {
+  auto& mega_tour = *(tours[0]);
   cvrp::local_search::optimize(mega_tour, instance);
 };
 
