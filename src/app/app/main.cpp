@@ -20,9 +20,13 @@ main(int argc, const char *argv[])
 
   auto optimizer = [&](std::vector<std::vector<int>*>& tours, cvrp::Instance& instance) {
 
-    auto& mega_tour = *(tours[0]);
     
-    cvrp::local_search::optimize(mega_tour, instance);
+    for (int i = 0; i < tours.size(); ++i){
+      
+      auto& mega_tour = *(tours[i]);
+      cvrp::local_search::optimize(mega_tour, instance);
+    }
+    
   }; 
 
   for (int i = 0; i < configIO.runs; ++i){
