@@ -116,7 +116,7 @@ BKS_DICT = {
 NUM_TESTES = 10
 DIRETORIO_SAIDA = "/app/output/seq/v4"
 ARQUIVO_DETALHE_CSV = os.path.join(DIRETORIO_SAIDA, "benchmark_final_detail.csv")
-EXECUTAVEL = "/app/src/build/sycl-dev/app/cvrp-pso"
+EXECUTAVEL = "/app/src/build/sycl-release/app/cvrp-pso"
 
 if len(sys.argv) < 3:
     print("Uso:")
