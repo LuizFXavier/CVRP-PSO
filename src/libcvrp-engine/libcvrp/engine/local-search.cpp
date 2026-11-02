@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <vector>
+#include <chrono>
 
 #include <libcvrp/engine/local-search.hpp>
 
@@ -11,13 +12,30 @@ namespace cvrp::local_search
 {
 
 void 
-optimize(std::vector<int>& mega_tour, Instance& instance)
+optimize(std::vector<int>& mega_tour, Instance& instance, PhaseTimes& times, int swap_cap)
 {
+  using clk = std::chrono::steady_clock;
+  auto ms = [](clk::time_point a, clk::time_point b) {
+    return std::chrono::duration<double, std::milli>(b - a).count();
+  };
+
+  auto t0 = clk::now();
+
   auto routes = import_mega_tour(mega_tour, instance);
+
+  auto t1 = clk::now();
 
   apply_two_opt(routes, instance);
 
-  apply_swap_star(routes, instance);
+  auto t2 = clk::now();
+
+  apply_swap_star(routes, instance, times, swap_cap);
+
+  auto t3 = clk::now();
+
+  times.import    += ms(t0, t1);
+  times.two_opt   += ms(t1, t2);
+  times.swap_star += ms(t2, t3);
 
   int tour_index = 1;
 
@@ -235,84 +253,88 @@ namespace
 }
 
 void 
-apply_swap_star(std::vector<Route> &routes, Instance& instance)
+apply_swap_star(std::vector<Route> &routes, Instance& instance, PhaseTimes& times, int swap_cap)
 {
   auto& clients = instance.clients;
+  int iter = 0;
+  int n_improved = 0;
 
-  for(unsigned i = 0; i < routes.size()-1; ++i){
-    for(unsigned j = i+1; j < routes.size(); ++j){
+  times.improved_hist.clear();
 
-      // Pula rotas que não intersectam os setores circulares
-      if (!(routes[i].sector.overlap(routes[j].sector)))
-        continue;
+  do {
+    n_improved = 0;
+    double best_swap_cost = 0;
 
-      std::vector<Top3Insertion> top3_insert_v(routes[i].size() - 1);
-      std::vector<Top3Insertion> top3_insert_u(routes[j].size() - 1);
+    for(unsigned i = 0; i < routes.size()-1; ++i){
+      for(unsigned j = i+1; j < routes.size(); ++j){
 
-      // Pré-processar melhores custos de inserção:
-      for (unsigned id_v = 1; id_v < routes[i].size() - 1; ++id_v)
-        top3_insert_v[id_v] = findTop3Locations(routes[i][id_v], routes[j], instance);
+        // Pula rotas que não intersectam os setores circulares
+        if (!(routes[i].sector.overlap(routes[j].sector)))
+          continue;
 
-      for (unsigned id_u = 1; id_u < routes[j].size() - 1; ++id_u)
-        top3_insert_u[id_u] = findTop3Locations(routes[j][id_u], routes[i], instance);
+        std::vector<Top3Insertion> top3_insert_v(routes[i].size() - 1);
+        std::vector<Top3Insertion> top3_insert_u(routes[j].size() - 1);
 
-      double best_swap_cost = 0;
+        // Pré-processar melhores custos de inserção:
+        for (unsigned id_v = 1; id_v < routes[i].size() - 1; ++id_v)
+          top3_insert_v[id_v] = findTop3Locations(routes[i][id_v], routes[j], instance);
 
-      insert_info best_v;
-      insert_info best_u;
+        for (unsigned id_u = 1; id_u < routes[j].size() - 1; ++id_u)
+          top3_insert_u[id_u] = findTop3Locations(routes[j][id_u], routes[i], instance);
 
-      unsigned best_v_id, best_u_id;
+        insert_info best_v;
+        insert_info best_u;
+        unsigned best_v_id = 0, best_u_id = 0;
+        bool local_improved = false;
 
-      for (unsigned id_v = 1; id_v < routes[i].size() - 1; ++id_v){
-        for (unsigned id_u = 1; id_u < routes[j].size() - 1; ++id_u){
+        for (unsigned id_v = 1; id_v < routes[i].size() - 1; ++id_v){
+          for (unsigned id_u = 1; id_u < routes[j].size() - 1; ++id_u){
+              
+            unsigned v = routes[i][id_v], u = routes[j][id_u];
+
+            if(routes[i].total_demand - clients[v].demand + clients[u].demand > instance.capacity)
+              continue;
             
-          unsigned v = routes[i][id_v], u = routes[j][id_u];
+            if(routes[j].total_demand - clients[u].demand + clients[v].demand > instance.capacity)
+              continue;
 
-          if(routes[i].total_demand - clients[v].demand + clients[u].demand > instance.capacity)
-            continue;
-          
-          if(routes[j].total_demand - clients[u].demand + clients[v].demand > instance.capacity)
-            continue;
-          
-          // Melhor inserção de v em r', fora inserção no mesmo lugar que o U e desconsiderando este da rota
+            auto k = top3_insert_v[id_v].get_best_insertion_except_id(id_u);
+            auto k_ln = top3_insert_u[id_u].get_best_insertion_except_id(id_v);
 
-          auto k = top3_insert_v[id_v].get_best_insertion_except_id(id_u);
+            float swap_v_in_u = insertion_cost(routes[i][id_v], routes[j][id_u - 1], routes[j][id_u + 1], instance);
+            float v_to_r_ln = std::min(swap_v_in_u, k.cost) - insertion_cost(routes[i][id_v], routes[i][id_v - 1], routes[i][id_v + 1], instance);
 
-          // Melhor inserção de u em r, fora inserção no mesmo lugar que o V e desconsiderando este da rota
+            float swap_u_in_v = insertion_cost(routes[j][id_u], routes[i][id_v - 1], routes[i][id_v + 1], instance);
+            float u_to_r = std::min(swap_u_in_v, k_ln.cost) - insertion_cost(routes[j][id_u], routes[j][id_u - 1], routes[j][id_u + 1], instance);
 
-          auto k_ln = top3_insert_u[id_u].get_best_insertion_except_id(id_v);
+            if (auto c = v_to_r_ln + u_to_r; c < best_swap_cost) {
+              best_swap_cost = c;
+              best_v = swap_v_in_u < k.cost ? insert_info{id_u - 1, id_u + 1, swap_v_in_u} : k;
+              best_v_id = id_v;
 
-          // Custo de inserção de V na exata posição de U
-          float swap_v_in_u = insertion_cost(routes[i][id_v], routes[j][id_u -1], routes[j][id_u+1], instance);
-
-          // Melhor custo de inserção de V em r'
-          float v_to_r_ln = std::min(swap_v_in_u, k.cost) - insertion_cost(routes[i][id_v], routes[i][id_v-1], routes[i][id_v+1], instance);
-
-          // Custo de inserção de U na exata posição de V
-          float swap_u_in_v = insertion_cost(routes[j][id_u], routes[i][id_v -1], routes[i][id_v+1], instance);
-          
-          // Melhor custo de inserção de U em r
-          float u_to_r = std::min(swap_u_in_v, k_ln.cost)- insertion_cost(routes[j][id_u], routes[j][id_u-1], routes[j][id_u+1], instance);
-
-          // Atualizar a melhor troca encontrada
-          if (auto c = v_to_r_ln + u_to_r; c < best_swap_cost) {
-
-            best_swap_cost = c;
-            best_v = swap_v_in_u < k.cost ? insert_info{id_u-1, id_u+1, swap_v_in_u} : k;
-            best_v_id = id_v;
-
-            best_u = swap_u_in_v < k_ln.cost ? insert_info{id_v-1, id_v+1, swap_u_in_v} : k_ln;
-            best_u_id = id_u;
-            
+              best_u = swap_u_in_v < k_ln.cost ? insert_info{id_v - 1, id_v + 1, swap_u_in_v} : k_ln;
+              best_u_id = id_u;
+              local_improved = true;
+            }
           }
         }
-      }
-      // A melhor troca que otimiza a solução, caso exista, é executada
-      if (best_swap_cost < 0) {
-        complete_swap_star(best_v_id, best_u_id, routes[i], routes[j], best_v, best_u, instance);
+
+        // Se encontrou uma troca válida neste par de rotas, aplica imediatamente
+        if (local_improved && best_swap_cost < 0) {
+          complete_swap_star(best_v_id, best_u_id, routes[i], routes[j], best_v, best_u, instance);
+          n_improved++;
+          best_swap_cost = 0; 
+        }
       }
     }
-  }
+
+    times.improved_hist.push_back(n_improved);
+    ++iter;
+
+  } while (n_improved > 0 && iter < swap_cap);
+
+  times.calls_used = iter;
+  times.hit_cap = (n_improved > 0);
 }
 
 } // namespace cvrp::local_search

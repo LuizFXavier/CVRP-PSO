@@ -14,9 +14,10 @@ bool test_trivial_instance();
 bool test_zero_iterations();
 bool test_reproducible();
 
-auto optimizer = [](std::vector<std::vector<int>*>& tours, cvrp::Instance& instance) {
+auto optimizer = [](std::vector<std::vector<int>*>& tours, cvrp::Instance& instance, cvrp::PhaseTimes& times) {
   auto& mega_tour = *(tours[0]);
-  cvrp::local_search::optimize(mega_tour, instance);
+  
+  cvrp::local_search::optimize(mega_tour, instance, times, 1);
 };
 
 int 
@@ -70,7 +71,9 @@ test_trivial_instance()
   pso::Particle best;
   try
   {
-    best = pso::run_pso(inst, hp, optimizer);
+    pso::PartialCost costs{};
+    pso::PhaseTimes times{};
+    best = pso::run_pso(inst, hp, optimizer, costs, times);
   }
   catch(const std::exception& e)
   {
@@ -90,8 +93,11 @@ test_zero_iterations()
   hp.swarm_size = 5;
   hp.iterations = 0; // O loop não deve correr
 
+  pso::PartialCost costs{};
+  pso::PhaseTimes times{};
+
   // Uma partícula não nula deve ser devolvida pelo PSO
-  pso::Particle best = pso::run_pso(inst, hp, optimizer);
+  pso::Particle best = pso::run_pso(inst, hp, optimizer, costs, times);
 
   return true; 
 }
@@ -105,13 +111,16 @@ test_reproducible() {
   hp.iterations = 5;
   hp.elite_size = 2;
 
+  pso::PartialCost costs{};
+  pso::PhaseTimes times{};
+
   // Primeira execução
   srand(42); 
-  pso::Particle best1 = pso::run_pso(inst, hp, optimizer);
+  pso::Particle best1 = pso::run_pso(inst, hp, optimizer, costs, times);
 
   // Segunda execução com a mesma semente
   srand(42);
-  pso::Particle best2 = pso::run_pso(inst, hp, optimizer);
+  pso::Particle best2 = pso::run_pso(inst, hp, optimizer, costs, times);
 
   return best1.curr_of == best2.curr_of;
 }

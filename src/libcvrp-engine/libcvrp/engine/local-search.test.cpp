@@ -108,7 +108,9 @@ test_swap_star(){
 
   std::vector<cvrp::Route> routes = {route1, route2};
 
-  cvrp::local_search::apply_swap_star(routes, inst);
+  cvrp::PhaseTimes times{};
+
+  cvrp::local_search::apply_swap_star(routes, inst, times);
 
   std::vector<int> comparison1 = {0, 1, 4, 6, 0};
   std::vector<int> comparison2 = {0, 5, 2, 3, 0};

@@ -67,7 +67,7 @@ sector_initializer_test(){
 
   inst.clients.push_back({3.0f, 0.0f, 1});
   
-  pso::Particle particle = pso::sector_initialize(inst, gen);
+  pso::Particle particle = pso::sector_initialize(inst, gen, false);
 
   if (!particle.curr_solution.size()){
     throw std::runtime_error("Error: Sector solution not initialized!");

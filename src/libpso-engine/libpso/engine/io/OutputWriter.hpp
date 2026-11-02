@@ -1,23 +1,28 @@
 #pragma once
 
+#include <string>
+#include <filesystem>
+#include <fstream>
+
+#include <libpso/core/PartialCost.hpp>
+#include <libpso/core/PhaseTimes.hpp>
+#include <libpso/core/Hyperparameters.hpp>
+
 namespace pso::io
 {
 
 class OutputWriter
 {
 private:
-    /* data */
+
 public:
-    OutputWriter(/* args */);
+std::filesystem::path file_path;
+std::ofstream file;
+    OutputWriter(std::filesystem::path path);
+
+    void save_data(std::string instance_name, int run_id, PartialCost costs, PhaseTimes times, double runtime, Hyperparameters hyperparameters);
+
     ~OutputWriter();
 };
-
-OutputWriter::OutputWriter(/* args */)
-{
-}
-
-OutputWriter::~OutputWriter()
-{
-}
 
 } // namespace pso::io

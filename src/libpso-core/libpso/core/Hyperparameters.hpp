@@ -13,6 +13,9 @@ namespace pso
     int elite_size = -1; // Número de partículas do enxame que passarão pelos mecanismos de busca local
     int batch_size = 1;
     int sectorized = 0;
+    int swap_cap = 1;
+    bool fixed_sector = true;
+    float bks = 0.0f;
   };
   
 } // namespace pso

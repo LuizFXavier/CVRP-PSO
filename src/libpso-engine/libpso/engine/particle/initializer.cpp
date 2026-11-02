@@ -78,19 +78,19 @@ namespace
 
 
 Particle
-sector_initialize(cvrp::Instance& instance, std::mt19937& gen)
+sector_initialize(cvrp::Instance& instance, std::mt19937& gen, bool randomize_next)
 {
   auto& clients = instance.clients;
 
-  std::vector<int> indexes(instance.dimension -1);
+  std::vector<int> indexes(instance.dimension - 1);
     
-  for(int i = 0; i < instance.dimension -1; i++){
-    indexes[i] = i+1;
+  for(int i = 0; i < instance.dimension - 1; i++){
+    indexes[i] = i + 1;
   }
 
-  std::uniform_int_distribution<> distrib(1, instance.dimension - 1);
-
-  int p_sel = distrib(gen);
+  // Sorteia o primeiro cliente pivô entre todos os disponíveis [1, dimension - 1]
+  std::uniform_int_distribution<int> distrib_initial(1, instance.dimension - 1);
+  int p_sel = distrib_initial(gen);
 
   auto squareDistanceCalc = [&](int id) {
     double dx = clients[id].x - clients[p_sel].x;
@@ -106,10 +106,10 @@ sector_initialize(cvrp::Instance& instance, std::mt19937& gen)
   
   int left = 0;
   int right = 0;
-  int a = 0;
 
   do
   {
+    // Ordena os clientes remanescentes a partir de 'left' por proximidade ao 'p_sel' sorteado
     std::sort(indexes.begin() + left, indexes.end(), cmp);
 
     right = best_r(instance, indexes, left);
@@ -121,10 +121,20 @@ sector_initialize(cvrp::Instance& instance, std::mt19937& gen)
 
     left = right;
     
-    p_sel = left < indexes.size() ? indexes[right] : distrib(gen);
+    p_sel = left < indexes.size() ? indexes[right] : distrib_initial(gen);
+
+    // Se ainda houverem clientes não alocados, sorteia o PRÓXIMO pivô de forma aleatória
+    // entre os elementos restantes em [left, indexes.size() - 1]
+
+
+    if (randomize_next && left < static_cast<int>(indexes.size())) {
+      std::uniform_int_distribution<int> distrib_remaining(left, indexes.size() - 1);
+      int random_idx = distrib_remaining(gen);
+      p_sel = indexes[random_idx];
+    }
       
   }
-  while (right < indexes.size());
+  while (right < static_cast<int>(indexes.size()));
     
   route.push_back(0);
 

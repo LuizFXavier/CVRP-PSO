@@ -7,6 +7,7 @@ target_include_directories(libpso-engine
 
 target_sources(libpso-engine
   PRIVATE
+  libpso/engine/io/OutputWriter.cpp
   libpso/engine/particle/initializer.cpp
   libpso/engine/particle/updater.cpp
   libpso/engine/pso-runner.cpp
