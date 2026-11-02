@@ -55,6 +55,8 @@ services:
 
   cvrp-pso-sycl-release:
     image: luizfxavier/cvrp-pso-sycl-dev:0.1
+    cpuset: "6"
+    shm_size: '2gb'
     build:
       context: .
       dockerfile: Dockerfile
@@ -68,7 +70,7 @@ services:
             - driver: cdi
               device_ids:
                 - nvidia.com/gpu=all
-              capabilities: [gpu]
+              capabilities: [gpu, utility, compute]
 
     environment:
       - ACPP_TARGETS=generic
@@ -103,6 +105,7 @@ services:
       "
   cvrp-pso-sequencial-release:
     image: luizfxavier/cvrp-pso-sycl-dev:0.1
+    cpuset: "7"
     build:
       context: .
       dockerfile: Dockerfile
