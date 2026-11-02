@@ -11,7 +11,8 @@ namespace app
     int runs = 1;
     int start_run = 1;
     bool showHelp = false;
-    bool save_times = false;
+    bool save_detail = false;
+    std::string detail_output_file;
   };
 
   struct Parameters{

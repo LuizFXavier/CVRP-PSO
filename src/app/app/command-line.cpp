@@ -67,13 +67,13 @@ parse_cli(int argc, const char* argv[])
       ++i;
     }
 
-    else if(valid_argument("--runs", i)){
+    else if(valid_argument("--start-run", i)){
 
       try{
         if(i+1 >= argc)
           throw std::runtime_error("");
 
-        config.runs = std::stoi(argv[i+1]);  
+        config.start_run = std::stoi(argv[i+1]);  
       }
       catch(const std::exception& e){
         throw std::runtime_error(std::format("Error: {} option requires an integer value.", arg));
@@ -82,9 +82,35 @@ parse_cli(int argc, const char* argv[])
       ++i;
     }
 
-    else if(valid_argument("--save_times", i)){
+    else if(valid_argument("--save-detail", i)){
 
-      config.save_times = true;
+      try{
+        if(i+1 >= argc)
+          throw std::runtime_error("");
+        
+        config.save_detail = true;
+        config.detail_output_file = argv[i+1];  
+      }
+      catch(const std::exception& e){
+        throw std::runtime_error(std::format("Error: {} option requires a file path.", arg));
+      }
+
+      ++i;
+    }
+
+    else if(valid_argument("--swap-cap", i)){
+
+      try{
+        if(i+1 >= argc)
+          throw std::runtime_error("");
+
+        pso.swap_cap = std::stoi(argv[i+1]);  
+      }
+      catch(const std::exception& e){
+        throw std::runtime_error(std::format("Error: {} option requires an integer value.", arg));
+      }
+                
+      ++i;
     }
 
     else if(valid_argument("--swarm-size", i) || valid_argument("--swarm", i)){
@@ -147,6 +173,16 @@ parse_cli(int argc, const char* argv[])
       ++i;
     }
 
+    else if(valid_argument("--sector-mode=fixed", i)){
+
+      pso.fixed_sector = true;
+    }
+
+    else if(valid_argument("--sector-mode=random", i)){
+
+      pso.fixed_sector = false;
+    }
+
     else if(valid_argument("--w-max", i)){
 
       try{
@@ -169,6 +205,51 @@ parse_cli(int argc, const char* argv[])
           throw std::runtime_error("");
 
         pso.w_min = std::stof(argv[i+1]);  
+      }
+      catch(const std::exception& e){
+        throw std::runtime_error(std::format("Error: {} option requires a float value.", arg));
+      }
+
+      ++i;
+    }
+
+    else if(valid_argument("--cognitive-c", i)){
+
+      try{
+        if(i+1 >= argc)
+          throw std::runtime_error("");
+
+        pso.cognitive_c = std::stof(argv[i+1]);  
+      }
+      catch(const std::exception& e){
+        throw std::runtime_error(std::format("Error: {} option requires a float value.", arg));
+      }
+
+      ++i;
+    }
+
+    else if(valid_argument("--social-c", i)){
+
+      try{
+        if(i+1 >= argc)
+          throw std::runtime_error("");
+
+        pso.social_c = std::stof(argv[i+1]);  
+      }
+      catch(const std::exception& e){
+        throw std::runtime_error(std::format("Error: {} option requires a float value.", arg));
+      }
+
+      ++i;
+    }
+
+    else if(valid_argument("--bks", i)){
+
+      try{
+        if(i+1 >= argc)
+          throw std::runtime_error("");
+
+        pso.bks = std::stof(argv[i+1]);  
       }
       catch(const std::exception& e){
         throw std::runtime_error(std::format("Error: {} option requires a float value.", arg));
