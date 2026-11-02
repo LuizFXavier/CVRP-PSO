@@ -36,6 +36,8 @@ public:
 
   int* d_num_pairs{};
 
+  int* d_improved{};
+
   int peak_clients_per_tour{};
   
   int peak_routes{};
@@ -72,6 +74,8 @@ public:
     this->d_route_pairs = sycl::malloc_device<RoutePair>(max_route_combs, q);
     
     this->d_num_pairs = sycl::malloc_device<int>(batch_size, q);
+
+    this->d_improved = sycl::malloc_device<int>(1, q);
 
     setup_route_combs(d_instance.minimum_routes, peak_routes);
   }
@@ -118,6 +122,8 @@ public:
     if (d_route_pairs) sycl::free(d_route_pairs, q);
 
     if (d_num_pairs) sycl::free(d_num_pairs, q);
+
+    if (d_improved) sycl::free(d_improved, q);
   }
 
 private:

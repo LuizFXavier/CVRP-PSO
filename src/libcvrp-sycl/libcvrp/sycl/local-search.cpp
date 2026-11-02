@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <format>
+#include <chrono>
 
 #include <libcvrp/sycl/local-search.hpp>
 
@@ -15,8 +16,13 @@
 namespace cvrp::sycl_engine::local_search
 {
 void 
-optimize(std::vector<std::vector<int>*>& batch_tours, Instance& instance, ExecutionContext& ctx)
+optimize(std::vector<std::vector<int>*>& batch_tours, Instance& instance, ExecutionContext& ctx, PhaseTimes& times, int swap_cap)
 {
+
+  using clk = std::chrono::steady_clock;
+  auto ms = [](clk::time_point a, clk::time_point b) {
+    return std::chrono::duration<double, std::milli>(b - a).count();
+  };
   
   std::vector<std::vector<DeviceRoute>> batch_routes;
 
@@ -28,11 +34,20 @@ optimize(std::vector<std::vector<int>*>& batch_tours, Instance& instance, Execut
   // Extrai as rotas do batch de tours e aplica o 2-opt nelas
   for (int i = 0; i < batch_routes.size(); ++i){
 
+    auto t0 = clk::now();
+
     batch_routes[i] = import_mega_tour(*(batch_tours[i]), instance);
 
     batch_num_pairs[i] = batch_routes[i].size() * (batch_routes[i].size() - 1) / 2;
 
+    auto t1 = clk::now();
+
     apply_two_opt(*(batch_tours[i]), batch_routes[i], instance);
+
+    auto t2 = clk::now();
+
+    times.import  += ms(t0, t1);
+    times.two_opt += ms(t1, t2);
   }
 
   // Cópia dos mega_tours, rotas e seus tamanhos para a GPU
@@ -46,7 +61,21 @@ optimize(std::vector<std::vector<int>*>& batch_tours, Instance& instance, Execut
 
   ctx.q.wait();
 
-  apply_swap_star(batch_routes, instance, ctx);
+  const int max_swap_star_iterations = 500; 
+
+  times.improved_hist.clear();
+
+  int iter = 0, n_improved;
+  do {
+    n_improved = apply_swap_star(batch_routes, instance, ctx, times.swap_star);
+    times.improved_hist.push_back(n_improved);
+    ++iter;
+   } while (n_improved > 0 && iter < swap_cap);
+
+  times.calls_used = iter;
+  times.hit_cap = (n_improved > 0);
+
+  // apply_swap_star(batch_routes, instance, ctx, times.swap_star);
 
   // Cópia dos mega_tours, rotas e seus tamanhos da GPU para a CPU
   for (int i = 0; i < batch_routes.size(); ++i){
@@ -314,11 +343,19 @@ namespace
   }
 }
 
-void 
+int 
 apply_swap_star(std::vector<std::vector<DeviceRoute>>& batch_routes,
                 Instance& instance,
-                ExecutionContext& ctx)
+                ExecutionContext& ctx,
+                double& time)
 {
+
+  ctx.q.memset(ctx.d_improved, 0, sizeof(int)).wait();
+  
+  auto ns = [](sycl::event e) {
+    return (e.get_profiling_info<sycl::info::event_profiling::command_end>() -
+            e.get_profiling_info<sycl::info::event_profiling::command_start>()) * 1e-6;
+  };
   
   cvrp::sycl_engine::DeviceInstance d_instance = ctx.d_instance;
   cvrp::sycl_engine::RoutePair* d_route_pairs = ctx.d_route_pairs;
@@ -329,6 +366,8 @@ apply_swap_star(std::vector<std::vector<DeviceRoute>>& batch_routes,
   int* d_num_pairs = ctx.d_num_pairs;
   int peak_routes = ctx.peak_routes;
   int peak_clients = ctx.peak_clients_per_tour;
+
+  int* d_improved = ctx.d_improved;
 
   int batch_size = batch_routes.size();
 
@@ -344,6 +383,7 @@ apply_swap_star(std::vector<std::vector<DeviceRoute>>& batch_routes,
 
   int max_combs = (max_routes > 1) ? (max_routes * (max_routes - 1)) / 2 : 0;
 
+  // Recuperação do tamanho da maior rota entre todas do lote
   size_t max_r_size = 0;
   for (const auto& routes : batch_routes) {
     if (!routes.empty()) {
@@ -364,6 +404,7 @@ apply_swap_star(std::vector<std::vector<DeviceRoute>>& batch_routes,
 
   size_t block_size = 32;
 
+  // Verificação de limites da GPU para explicitar erros
   {
     size_t local_bytes = max_r_size * (2 * sizeof(int) + 2 * sizeof(Top3Insertion));
     auto   local_lim   = ctx.q.get_device().get_info<sycl::info::device::local_mem_size>();
@@ -375,6 +416,7 @@ apply_swap_star(std::vector<std::vector<DeviceRoute>>& batch_routes,
     if (max_combs > absolute_max_routes_combs) throw std::runtime_error("pares > max_route_combs");
   }
 
+  // Kernel para encontro da melhor troca para cada tour do lote
   auto nd_main = ctx.q.submit([&] (sycl::handler& h){
 
     sycl::range<2> global{(size_t) batch_size, max_combs * block_size};
@@ -491,12 +533,63 @@ apply_swap_star(std::vector<std::vector<DeviceRoute>>& batch_routes,
     });
   });
 
-  ctx.q.submit([&](sycl::handler& h){
+  // Kernel para aplicar a mudança encontrada
+  // auto ev_b = ctx.q.submit([&](sycl::handler& h){
+
+  //   h.depends_on(nd_main);
+
+  //   sycl::range<1> global{batch_size * block_size};
+  //   sycl::range<1> local{block_size};
+
+  //   h.parallel_for(sycl::nd_range<1>{global, local},
+  //   [=](sycl::nd_item<1> it){
+      
+  //     auto gp = it.get_group();
+  //     const int batch_id = gp.get_group_linear_id();
+  //     const size_t local_id = it.get_local_id(0);
+
+  //     const BestSwap* p_best_swap = d_best_swap + (size_t)batch_id * max_combs;
+
+  //     uint64_t k = NO_KEY;
+
+  //     for (int c = local_id; c < max_combs; c += block_size){
+  //       float cost = p_best_swap[c].total_cost;
+
+  //       k = sycl::min(k, make_key(cost, c));
+  //     }
+
+  //     uint64_t winner = sycl::reduce_over_group(gp, k, sycl::minimum<uint64_t>());
+
+  //     if (gp.leader() && winner != NO_KEY){
+
+  //       BestSwap best = p_best_swap[uint32_t(winner)];
+
+  //       if (best.total_cost < -1e-4f) {
+  //         DeviceRoute* p_routes_b = d_routes + (size_t)batch_id * peak_routes;
+  //         complete_swap_star(&best,
+  //                           d_tour + (size_t)batch_id * peak_clients,
+  //                           p_routes_b + best.r_i, p_routes_b + best.r_j, d_instance);
+
+  //         sycl::atomic_ref<int, sycl::memory_order::relaxed, sycl::memory_scope::device,
+  //                sycl::access::address_space::global_space> cnt(*d_improved);
+  //         cnt.fetch_add(1);
+  //       }
+  //     }
+
+  //   });
+    
+  // });
+
+  // Kernel para aplicar múltiplas mudanças em rotas disjuntas encontradas
+  auto ev_b = ctx.q.submit([&](sycl::handler& h){
 
     h.depends_on(nd_main);
 
     sycl::range<1> global{batch_size * block_size};
     sycl::range<1> local{block_size};
+
+    // Aloca vetor local para marcar quais rotas já foram modificadas nesta partícula
+    auto local_locked = sycl::local_accessor<int, 1>(peak_routes, h);
 
     h.parallel_for(sycl::nd_range<1>{global, local},
     [=](sycl::nd_item<1> it){
@@ -506,32 +599,103 @@ apply_swap_star(std::vector<std::vector<DeviceRoute>>& batch_routes,
       const size_t local_id = it.get_local_id(0);
 
       const BestSwap* p_best_swap = d_best_swap + (size_t)batch_id * max_combs;
+      int* locked_ptr = local_locked.get_multi_ptr<sycl::access::decorated::no>().get();
 
-      uint64_t k = NO_KEY;
-
-      for (int c = local_id; c < max_combs; c += block_size){
-        float cost = p_best_swap[c].total_cost;
-
-        k = sycl::min(k, make_key(cost, c));
+      // 1. Inicializa o array de rotas bloqueadas como 0 (falso) para todas as rotas da partícula
+      for (int i = local_id; i < peak_routes; i += block_size) {
+        locked_ptr[i] = 0;
       }
+      sycl::group_barrier(gp);
 
-      uint64_t winner = sycl::reduce_over_group(gp, k, sycl::minimum<uint64_t>());
+      // Número máximo de trocas disjuntas possíveis (metade do total de rotas)
+      const int max_disjoint_iters = peak_routes / 2;
 
-      if (gp.leader() && winner != NO_KEY){
+      bool particle_improved = false;
 
-        BestSwap best = p_best_swap[uint32_t(winner)];
+      // Loop guloso para extrair e aplicar várias trocas disjuntas em sequência
+      for (int iter_swap = 0; iter_swap < max_disjoint_iters; ++iter_swap) {
+        
+        uint64_t k = NO_KEY;
 
-        if (best.total_cost < 0) {
-          DeviceRoute* p_routes_b = d_routes + (size_t)batch_id * peak_routes;
-          complete_swap_star(&best,
-                            d_tour + (size_t)batch_id * peak_clients,
-                            p_routes_b + best.r_i, p_routes_b + best.r_j, d_instance);
+        // Cada thread avalia suas combinações atribuídas
+        for (int c = local_id; c < max_combs; c += block_size){
+          float cost = p_best_swap[c].total_cost;
+          int r_i = p_best_swap[c].r_i;
+          int r_j = p_best_swap[c].r_j;
+
+          // Verifica se a troca é lucrativa, válida e se nenhuma das duas rotas está bloqueada
+          if (cost < -1e-4f && r_i >= 0 && r_j >= 0) {
+            if (locked_ptr[r_i] == 0 && locked_ptr[r_j] == 0) {
+              k = sycl::min(k, make_key(cost, c));
+            }
+          }
         }
+
+        // Redução no grupo para encontrar a melhor troca válida global nesta rodada do loop
+        uint64_t winner = sycl::reduce_over_group(gp, k, sycl::minimum<uint64_t>());
+
+        // Se nenhuma troca válida for encontrada, encerra o loop guloso para esta partícula
+        if (winner == NO_KEY) {
+          break;
+        }
+
+        // O leader aplica a troca vencedora e bloqueia as rotas envolvidas
+        if (gp.leader()){
+          BestSwap best = p_best_swap[uint32_t(winner)];
+
+          // Bloqueia as rotas r_i e r_j para que não participem de novas trocas nesta iteração
+          locked_ptr[best.r_i] = 1;
+          locked_ptr[best.r_j] = 1;
+
+          DeviceRoute* p_routes_b = d_routes + (size_t)batch_id * peak_routes;
+          int* tour_ptr = d_tour + (size_t)batch_id * peak_clients;
+
+          complete_swap_star(&best, tour_ptr, p_routes_b + best.r_i, p_routes_b + best.r_j, d_instance);
+
+          // ATUALIZAÇÃO DOS SETORES DAS ROTAS MODIFICADAS (r_i e r_j) DIRETAMENTE NA GPU
+          
+          auto update_route_sector = [&](int route_idx) {
+            DeviceRoute& route = p_routes_b[route_idx];
+            if (route.size > 0) {
+              int first_client = tour_ptr[route.start_index];
+              // Inicializa o setor com o ângulo polar do primeiro cliente da rota
+              route.sector.initialize(d_instance.clients[first_client].polarAngle);
+
+              // Estende o setor com os demais clientes da rota
+              for (int k = 1; k < route.size; ++k) {
+                int client = tour_ptr[route.start_index + k];
+                route.sector.extend(d_instance.clients[client].polarAngle);
+              }
+            }
+          };
+
+          update_route_sector(best.r_i);
+          update_route_sector(best.r_j);
+          // =========================================================================
+
+          if (!particle_improved){
+            sycl::atomic_ref<int, sycl::memory_order::relaxed, sycl::memory_scope::device,
+                   sycl::access::address_space::global_space> cnt(*d_improved);
+            cnt.fetch_add(1);
+            particle_improved = true;
+          }
+
+        // Sincroniza o work-group para garantir que todas as threads vejam o novo estado de bloqueio
+        sycl::group_barrier(gp);
       }
+    }
 
     });
     
-  }).wait_and_throw();
+  });
+  
+  ctx.q.wait_and_throw();
 
+  time += ns(nd_main);
+  time += ns(ev_b);
+
+  int n_improved = 0;
+  ctx.q.memcpy(&n_improved, ctx.d_improved, sizeof(int)).wait();
+  return n_improved;
 }
 } // namespace cvrp::sycl

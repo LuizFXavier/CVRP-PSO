@@ -73,7 +73,9 @@ run_swap_star(cvrp::Instance& inst,
   int num_pairs = routes.size() * (routes.size() - 1) / 2;
   ctx.q.memcpy(ctx.d_num_pairs, &num_pairs, sizeof(int)).wait();
 
-  cvrp::sycl_engine::local_search::apply_swap_star(batch_routes, inst, ctx);
+  double times = 0;
+
+  cvrp::sycl_engine::local_search::apply_swap_star(batch_routes, inst, ctx, times);
 
   SwapStarResult result;
 
@@ -331,7 +333,6 @@ test_swap_star_many_route_pairs(){
 
   inst.build_distance_matrix();
 
-  // Cada rota tem 3 clientes consecutivos: tour = {0, 1, 2, ..., 36, 0}
   std::vector<int> mega_tour(inst.dimension + 1, 0);
   std::iota(mega_tour.begin(), mega_tour.end() - 1, 0);
 
@@ -342,7 +343,8 @@ test_swap_star_many_route_pairs(){
 
   auto result = run_swap_star(inst, mega_tour, routes);
 
-  expect_tour("many route pairs", {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 28, 24, 25, 26, 27, 23, 29, 30, 31, 32, 33, 34, 35, 36, 0}, result.tour);
+  // Atualizado com o tour resultante da aplicação gulosa de múltiplas trocas disjuntas
+  expect_tour("many route pairs", {0, 1, 2, 12, 4, 5, 36, 7, 8, 15, 10, 3, 11, 13, 9, 14, 16, 18, 33, 19, 25, 21, 22, 28, 24, 26, 20, 27, 23, 29, 30, 31, 17, 32, 34, 35, 6, 0}, result.tour);
 }
 
 // 2 rotas longas (34 e 40 clientes): os lacos com stride (carga das tiles, Top3, pares (v,u)) dao varias voltas
@@ -543,7 +545,9 @@ test_swap_star(){
 
   std::vector<std::vector<cvrp::sycl_engine::DeviceRoute>> batch_routes = { routes };
 
-  cvrp::sycl_engine::local_search::apply_swap_star(batch_routes, inst, ctx);
+  double time = 0;
+
+  cvrp::sycl_engine::local_search::apply_swap_star(batch_routes, inst, ctx, time);
 
   std::vector<int> comparison = {0, 1, 4, 6, 5, 2, 3, 0};
 
