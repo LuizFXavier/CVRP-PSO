@@ -10,4 +10,4 @@ source /opt/venv/bin/activate &&
 
 echo "🚀 Executando testes de tempo..."
 
-python3 -u /app/scripts/runtime_test_docker.py -F /app/instances/X/X-n1001-k43.vrp
+python3 -u /app/scripts/benchmark_sycl.py -D /app/instances/X

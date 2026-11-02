@@ -11,13 +11,15 @@ ctest --output-on-failure --test-dir /app/src/build/sycl-dev &&
       --iterations ${TEST_ITERATIONS} \
       --swarm ${TEST_SWARM_SIZE} \
       --elite ${TEST_ELITE_SIZE} && 
-      /app/src/build/sycl-dev/app/sycl-cvrp \
+      /app/src/build/sycl-dev/app/cvrp-sycl \
       --in ${TEST_INPUT_DATASET} \
       --out /app/output/sycl/ \
       --runs ${TEST_NUM_RUNS} \
       --iterations ${TEST_ITERATIONS} \
       --swarm ${TEST_SWARM_SIZE} \
-      --elite ${TEST_ELITE_SIZE};
+      --elite ${TEST_ELITE_SIZE} \
+      --swap-cap 20 \
+      --save-detail /app/output/sycl/v4/out.csv;
 
 
 echo "🔭 Watching for changes on /app/src..."
@@ -34,12 +36,14 @@ while inotifywait -q -r -e modify,create,delete /app/src --exclude 'nohup.out|ou
       --iterations ${TEST_ITERATIONS} \
       --swarm ${TEST_SWARM_SIZE} \
       --elite ${TEST_ELITE_SIZE} && 
-      /app/src/build/sycl-dev/app/sycl-cvrp \
+      /app/src/build/sycl-dev/app/cvrp-sycl \
       --in ${TEST_INPUT_DATASET} \
       --out /app/output/sycl/ \
       --runs ${TEST_NUM_RUNS} \
       --iterations ${TEST_ITERATIONS} \
       --swarm ${TEST_SWARM_SIZE} \
-      --elite ${TEST_ELITE_SIZE};
+      --elite ${TEST_ELITE_SIZE} \
+      --swap-cap 20 \
+      --save-detail /app/output/sycl/v4/out.csv;
   echo "✅ Execution finished. Waiting for changes..."
 done
