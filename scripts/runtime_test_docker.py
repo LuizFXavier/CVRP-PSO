@@ -22,7 +22,7 @@ elif argv[1].upper() == "-D":
 else:
     raise Exception("Não se sabe se é arquivo ou diretório!")
 
-caminho_output = "/app/output/PSO_data_sycl_v3.xlsx"
+caminho_output = "/app/output/PSO_data_sycl_v4_swap_multi.xlsx"
 
 if len(argv) == 4:
     caminho_output = argv[3]
@@ -56,7 +56,7 @@ NUM_THREADS = ["1"]
 
 count = 1
 
-EXECUTAVEL = os.path.expanduser("/app/src/build/sycl-release/app/sycl-cvrp")
+EXECUTAVEL = os.path.expanduser("/app/src/build/sycl-release/app/cvrp-sycl")
 
 for caso_teste in arquivos_teste:
     print(caso_teste)
