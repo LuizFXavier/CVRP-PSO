@@ -158,7 +158,7 @@ except:
     ws = wb.active
 
 # Parâmetros fixos
-iterations = 300
+iterations = 500
 swarm_size = 150
 elite_size = 75
 sector_size = swarm_size

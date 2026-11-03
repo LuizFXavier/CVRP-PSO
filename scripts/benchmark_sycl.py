@@ -114,7 +114,7 @@ BKS_DICT = {
 # ==============================================================================
 
 NUM_TESTES = 10
-ARQUIVO_DETALHE_CSV = "/app/output/sycl/v4/benchmark_final_detail.csv"
+ARQUIVO_DETALHE_CSV = "/app/output/sycl/v5/benchmark_final_detail.csv"
 
 if len(sys.argv) < 3:
     print("Uso:")
@@ -141,7 +141,7 @@ elif modo == "-D":
 else:
     raise Exception("Erro: Use '-f' para arquivo único ou '-d' para diretório!")
 
-caminho_output = sys.argv[3] if len(sys.argv) >= 4 else "/app/output/sycl/v4/PSO_benchmark_final.xlsx"
+caminho_output = sys.argv[3] if len(sys.argv) >= 4 else "/app/output/sycl/v5/PSO_benchmark_final.xlsx"
 arquivos_teste.sort()
 
 try:
@@ -152,29 +152,21 @@ except:
     wb = Workbook()
     ws = wb.active
 
-dados = [["Mínimo:"],
-         ["Mediana:"],
-         ["Máximo:"],
-         ["Média:"],
-         ["Desvio padrão:"],
-         ["Tempo Médio (s):"],
-         ["SD Tempo:"]]
-
-valores_custo = []
-valores_tempo = []
-
 # Parâmetros fixos definitivos solicitados
-iterations = 300
+iterations = 500
 swarm_size = 150
 elite_size = 75
 sector_size = swarm_size
 w_max_fixed = 0.0
 w_min_fixed = 0.0
-c1_fixed = 1.0
-c2_fixed = 1.0
+
+configs_socio_cognitivas = [
+  [0.0, 0.0],
+  [1.0, 1.0]
+]
 
 EXECUTAVEL = os.path.expanduser("/app/src/build/sycl-release/app/cvrp-sycl")
-os.makedirs("/app/output/sycl/v4", exist_ok=True)
+os.makedirs("/app/output/sycl/v5", exist_ok=True)
 
 count = 1
 
@@ -194,82 +186,83 @@ for caso_teste in arquivos_teste:
     if bks_valor is None:
         print(f"⚠️ Aviso: Instância '{nome_instancia}' não encontrada no BKS_DICT. O parâmetro --bks não será passado.")
 
-    # --------------------------------------------------------------------------
-    # LÓGICA DE DETECÇÃO DE RETOMADA (--start-run)
-    # --------------------------------------------------------------------------
-    runs_ja_executadas = 0
-    if os.path.exists(ARQUIVO_DETALHE_CSV):
-        try:
-            df_existente = pd.read_csv(ARQUIVO_DETALHE_CSV)
-            if 'inst' in df_existente.columns and 'run' in df_existente.columns:
-                # Filtra runs da instância atual
-                sub_df = df_existente[df_existente['inst'] == nome_instancia]
-                runs_ja_executadas = len(sub_df)
-        except Exception as e:
-            print(f"⚠️ Aviso ao ler o CSV de detalhes para retomada: {e}")
-
-    if runs_ja_executadas >= NUM_TESTES:
-        print(f"\n✨ Instância '{nome_instancia}' já possui todas as {NUM_TESTES} execuções concluídas no CSV. Pulando...")
-        continue
-
-    start_run_id = runs_ja_executadas + 1
-    runs_restantes = NUM_TESTES - runs_ja_executadas
-
-    print(f"\n========================================================")
-    print(f"🧪 INSTÂNCIA: {nome_instancia} | Retomando a partir da Run: {start_run_id} ({runs_restantes} restantes)")
-    print(f"Configuração Fixa: Swarm={swarm_size}, Elite={elite_size}, Iter={iterations}")
-    print(f"========================================================")
-
-    comando = [
-        EXECUTAVEL,
-        "--in", caminho_completo,
-        "--out", "/app/output/sycl/v4",
-        "--swarm", str(swarm_size),
-        "--iter", str(iterations),
-        "--elite", str(elite_size),
-        "--runs", str(runs_restantes),
-        "--start-run", str(start_run_id),
-        "--sector", str(sector_size),
-        "--w-max", str(w_max_fixed),
-        "--w-min", str(w_min_fixed),
-        "--cognitive-c", str(c1_fixed),
-        "--social-c", str(c2_fixed),
-        "--swap-cap", "20",
-        "--save-detail", ARQUIVO_DETALHE_CSV
-    ]
-
-    if bks_valor is not None:
-        comando.extend(["--bks", str(bks_valor)])
-
-    try:
-        output = subprocess.check_output(comando).decode().strip()
-        linhas_output = output.split('\n')
+    # Loop pelas configurações sócio-cognitivas (c1, c2)
+    for c1, c2 in configs_socio_cognitivas:
         
-        for linha in linhas_output:
-            if not linha.strip():
-                continue
-            if ',' in linha:
-                parts = linha.split(',')
-                if len(parts) >= 2:
-                    custo_str, tempo_str = parts[0], parts[1]
-                    print(f"-> Custo retornado: {custo_str} | Tempo: {tempo_str}s")
-
-        # Recarrega o CSV consolidado atualizado para calcular as estatísticas gerais da instância
+        # --------------------------------------------------------------------------
+        # LÓGICA DE DETECÇÃO DE RETOMADA (--start-run) POR CONFIGURAÇÃO (c1, c2)
+        # --------------------------------------------------------------------------
+        runs_ja_executadas = 0
         if os.path.exists(ARQUIVO_DETALHE_CSV):
-            df_atualizado = pd.read_csv(ARQUIVO_DETALHE_CSV)
-            sub_atual = df_atualizado[df_atualizado['inst'] == nome_instancia]
-            
-            # Tenta extrair a coluna de custo final/g_best do detail se houver
-            col_custo = 'g_best' if 'g_best' in sub_atual.columns else ('cost' if 'cost' in sub_atual.columns else None)
-            col_tempo = 'cum_ms' if 'cum_ms' in sub_atual.columns else ('time_s' if 'time_s' in sub_atual.columns else None)
+            try:
+                df_existente = pd.read_csv(ARQUIVO_DETALHE_CSV)
+                if 'inst' in df_existente.columns and 'run' in df_existente.columns:
+                    # Filtra pela instância atual
+                    sub_df = df_existente[df_existente['inst'] == nome_instancia]
+                    
+                    # Identifica dinamicamente as colunas de parâmetros no CSV gravado pelo executável
+                    c1_col = next((col for col in ['cognitive_c', 'c1', 'cognitive'] if col in sub_df.columns), None)
+                    c2_col = next((col for col in ['social_c', 'c2', 'social'] if col in sub_df.columns), None)
+                    
+                    # Se as colunas existirem, filtra estritamente pelas execuções da configuração c1 e c2 atual
+                    if c1_col and c2_col:
+                        sub_df = sub_df[(np.isclose(sub_df[c1_col], c1)) & (np.isclose(sub_df[c2_col], c2))]
+                    
+                    runs_ja_executadas = len(sub_df)
+            except Exception as e:
+                print(f"⚠️ Aviso ao ler o CSV de detalhes para retomada: {e}")
 
-            # Se o log salvar em formato de colunas no detalhe, extraímos direto de lá:
-            # Caso contrário, coletamos do output ou recalculamos estatísticas.
-            
-    except Exception as e:
-        print(f"❌ Erro ao executar o comando para '{nome_instancia}': {e}")
+        if runs_ja_executadas >= NUM_TESTES:
+            print(f"\n✨ Instância '{nome_instancia}' [c1={c1}, c2={c2}] já possui todas as {NUM_TESTES} execuções concluídas. Pulando...")
+            continue
 
-    print(f"{count}/{len(arquivos_teste)} - {caso_teste} processado.")
+        start_run_id = runs_ja_executadas + 1
+        runs_restantes = NUM_TESTES - runs_ja_executadas
+
+        print(f"\n========================================================")
+        print(f"🧪 INSTÂNCIA: {nome_instancia} | Config: c1={c1}, c2={c2}")
+        print(f"Retomando a partir da Run: {start_run_id} ({runs_restantes} restantes)")
+        print(f"Configuração Fixa: Swarm={swarm_size}, Elite={elite_size}, Iter={iterations}")
+        print(f"========================================================")
+
+        comando = [
+            EXECUTAVEL,
+            "--in", caminho_completo,
+            "--out", "/app/output/sycl/v5",
+            "--swarm", str(swarm_size),
+            "--iter", str(iterations),
+            "--elite", str(elite_size),
+            "--runs", str(runs_restantes),
+            "--start-run", str(start_run_id),
+            "--sector", str(sector_size),
+            "--w-max", str(w_max_fixed),
+            "--w-min", str(w_min_fixed),
+            "--cognitive-c", str(c1),
+            "--social-c", str(c2),
+            "--swap-cap", "20",
+            "--save-detail", ARQUIVO_DETALHE_CSV
+        ]
+
+        if bks_valor is not None:
+            comando.extend(["--bks", str(bks_valor)])
+
+        try:
+            output = subprocess.check_output(comando).decode().strip()
+            linhas_output = output.split('\n')
+            
+            for linha in linhas_output:
+                if not linha.strip():
+                    continue
+                if ',' in linha:
+                    parts = linha.split(',')
+                    if len(parts) >= 2:
+                        custo_str, tempo_str = parts[0], parts[1]
+                        print(f"-> Custo retornado: {custo_str} | Tempo: {tempo_str}s")
+                
+        except Exception as e:
+            print(f"❌ Erro ao executar o comando para '{nome_instancia}' [c1={c1}, c2={c2}]: {e}")
+
+    print(f"{count}/{len(arquivos_teste)} - {caso_teste} processado para todas as configurações.")
     count += 1
 
 print("\n🏁 Execuções finalizadas com sucesso! Detalhes consolidados em:", ARQUIVO_DETALHE_CSV)
