@@ -40,7 +40,7 @@ pso::io::OutputWriter::save_data(std::string instance_name,
 
     std::string header{};
 
-    header += std::string("instance-name,run-id,iterations,swarm-size,elite-size,sectorized,w-max,w-min,cognitive,social,fixed-sector");
+    header += std::string("instance-name,run-id,iterations,swarm-size,elite-size,sectorized,w-max,w-min,cognitive,social,fixed-sector,");
 
     header += std::string("initial-cost,1/4-cost,1/2-cost,3/4-cost,cost,");
 
