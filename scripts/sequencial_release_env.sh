@@ -10,4 +10,4 @@ source /opt/venv/bin/activate &&
 
 echo "🚀 Executando testes de tempo..."
 
-python3 -u /app/scripts/benchmark_sequencial.py -D /app/instances/X
+python3 -u /app/scripts/benchmark_sequencial.py -D /app/instances/X_short
