@@ -79,7 +79,7 @@ main(int argc, const char *argv[])
 
     auto start_time = std::chrono::high_resolution_clock::now();
 
-    auto best_particle = pso::run_pso(instance, hyperparameters, optimizer, costs, times);
+    auto best_particle = pso::run_pso(instance, hyperparameters, optimizer, costs, times, &obs);
 
     auto end_time = std::chrono::high_resolution_clock::now();
 
