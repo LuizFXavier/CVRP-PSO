@@ -533,53 +533,6 @@ apply_swap_star(std::vector<std::vector<DeviceRoute>>& batch_routes,
     });
   });
 
-  // Kernel para aplicar a mudança encontrada
-  // auto ev_b = ctx.q.submit([&](sycl::handler& h){
-
-  //   h.depends_on(nd_main);
-
-  //   sycl::range<1> global{batch_size * block_size};
-  //   sycl::range<1> local{block_size};
-
-  //   h.parallel_for(sycl::nd_range<1>{global, local},
-  //   [=](sycl::nd_item<1> it){
-      
-  //     auto gp = it.get_group();
-  //     const int batch_id = gp.get_group_linear_id();
-  //     const size_t local_id = it.get_local_id(0);
-
-  //     const BestSwap* p_best_swap = d_best_swap + (size_t)batch_id * max_combs;
-
-  //     uint64_t k = NO_KEY;
-
-  //     for (int c = local_id; c < max_combs; c += block_size){
-  //       float cost = p_best_swap[c].total_cost;
-
-  //       k = sycl::min(k, make_key(cost, c));
-  //     }
-
-  //     uint64_t winner = sycl::reduce_over_group(gp, k, sycl::minimum<uint64_t>());
-
-  //     if (gp.leader() && winner != NO_KEY){
-
-  //       BestSwap best = p_best_swap[uint32_t(winner)];
-
-  //       if (best.total_cost < -1e-4f) {
-  //         DeviceRoute* p_routes_b = d_routes + (size_t)batch_id * peak_routes;
-  //         complete_swap_star(&best,
-  //                           d_tour + (size_t)batch_id * peak_clients,
-  //                           p_routes_b + best.r_i, p_routes_b + best.r_j, d_instance);
-
-  //         sycl::atomic_ref<int, sycl::memory_order::relaxed, sycl::memory_scope::device,
-  //                sycl::access::address_space::global_space> cnt(*d_improved);
-  //         cnt.fetch_add(1);
-  //       }
-  //     }
-
-  //   });
-    
-  // });
-
   // Kernel para aplicar múltiplas mudanças em rotas disjuntas encontradas
   auto ev_b = ctx.q.submit([&](sycl::handler& h){
 
@@ -671,7 +624,6 @@ apply_swap_star(std::vector<std::vector<DeviceRoute>>& batch_routes,
 
           update_route_sector(best.r_i);
           update_route_sector(best.r_j);
-          // =========================================================================
 
           if (!particle_improved){
             sycl::atomic_ref<int, sycl::memory_order::relaxed, sycl::memory_scope::device,
@@ -680,9 +632,9 @@ apply_swap_star(std::vector<std::vector<DeviceRoute>>& batch_routes,
             particle_improved = true;
           }
 
-        // Sincroniza o work-group para garantir que todas as threads vejam o novo estado de bloqueio
-        sycl::group_barrier(gp);
-      }
+        }
+      // Sincroniza o work-group para garantir que todas as threads vejam o novo estado de bloqueio
+      sycl::group_barrier(gp);
     }
 
     });
